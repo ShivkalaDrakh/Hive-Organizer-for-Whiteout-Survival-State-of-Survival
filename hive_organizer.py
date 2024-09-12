@@ -14,6 +14,7 @@ def callback(url):
 # script dir will be used as initial for load/save
 script_dir=os.path.dirname(os.path.realpath(__file__))
 init_dir =os.path.join(script_dir,'hive')
+save_dir = os.path.join(init_dir,'save')
 
 #color dictionary
 used_colors = { "assign":"#99ee99",
@@ -764,8 +765,7 @@ class MainWindow(tk.Tk):
         top.resizable(False, False)
         qr_im = ImageTk.PhotoImage(Image.open(os.path.join(init_dir,'Donate QR Code.png')))
         dlabel = tk.Label(top,image=qr_im,padx=10, pady=10).pack()
-        #db_im = ImageTk.PhotoImage(Image.open(os.path.join(init_dir,'donate_btn.jpg')))
-        #tk.Button(top,image=db_im, command=lambda: callback('https://www.paypal.com/donate/?hosted_button_id=J3NY5KH92LC7L')).pack()
+
         db_im2 = ImageTk.PhotoImage(Image.open(os.path.join(init_dir,'donate-button4.png')).resize((100,100)))
         dbtn = tk.Button(top,image=db_im2,padx=10, pady=10, command=lambda: callback('https://www.paypal.com/donate/?hosted_button_id=J3NY5KH92LC7L')).pack()
         top.mainloop()
@@ -994,7 +994,7 @@ class MainWindow(tk.Tk):
 
     def saveLayout(self):
         #save buildings and assignments to file
-        save_file = asksaveasfilename(title='Save Hive as:', defaultextension='.hb', initialdir=init_dir,filetypes=[('Hive Builder file','*.hb')])
+        save_file = asksaveasfilename(title='Save Hive as:', defaultextension='.hb', initialdir=save_dir,filetypes=[('Hive Organizer file','*.hb')])
         self.assigments = { id : city for city, id in self.paint_canvas.cities.items()}
         building_info = list()
         #get list of lists for all building coordinates
@@ -1024,7 +1024,7 @@ class MainWindow(tk.Tk):
         #load previously saved layout
         lines=''
         ml_data = str()
-        load_file = askopenfilename(title='Load Hive file:',initialdir=init_dir,defaultextension='.hb',filetypes=[('Hive Builder file','*.hb'), ('All files','*.*')])   
+        load_file = askopenfilename(title='Load Hive file:',initialdir=save_dir,defaultextension='.hb',filetypes=[('Hive Organizer file','*.hb'), ('All files','*.*')])   
         if load_file:
             with open(load_file,'r') as file:
                 lines=file.readlines()
@@ -1112,7 +1112,7 @@ class MainWindow(tk.Tk):
         canvas.create_rectangle(canvas.origin[0]-1,canvas.origin[1]-1,canvas.origin[0]+1,canvas.origin[1]+1)    
 
     def loadMembersList(self):
-        load_file = askopenfilename(title='Load Member List:',initialdir=init_dir, defaultextension='.txt', filetypes=[('Member List text file','*.txt'), ('All files','*.*')]) 
+        load_file = askopenfilename(title='Load Member List:',initialdir=save_dir, defaultextension='.txt', filetypes=[('Member List text file','*.txt'), ('All files','*.*')]) 
         if load_file:
             with open(load_file,'r') as file:
                 lines=file.readlines()

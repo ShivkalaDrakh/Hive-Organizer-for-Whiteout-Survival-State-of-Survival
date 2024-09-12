@@ -775,17 +775,27 @@ class MainWindow(tk.Tk):
         self.active_button = None
         self.buildings = set(['HQ','City','Flag','Trap','Rock'])
 
-    def donate(self):
+    def donate(self, width=300, height=300):
         top=tk.Toplevel(self)
         top.details_expanded = False
+
+        #position, width, and hight based on main window geometry
+        top_x = int(self.winfo_x()+self.winfo_width()/2-150)
+        top_y = self.winfo_y()+100
+
         top.title("Help Shivkala!")
-        top.geometry("300x300+{}+{}".format(int(self.winfo_x()+self.winfo_width()/2-150), self.winfo_y()+100))
+        top.geometry("{}x{}+{}+{}".format(width, height, top_x, top_y))
         top.resizable(False, False)
-        qr_im = ImageTk.PhotoImage(Image.open(os.path.join(init_dir,'Donate QR Code.png')))
-        dlabel = tk.Label(top,image=qr_im,padx=10, pady=10).pack()
+        top_frame = ttk.Frame(top,width=width, height=height)
+        top_frame.grid_propagate(0)
+        top_frame.pack()
 
         db_im2 = ImageTk.PhotoImage(Image.open(os.path.join(init_dir,'donate-button4.png')).resize((100,100)))
-        dbtn = tk.Button(top,image=db_im2,padx=10, pady=10, command=lambda: callback('https://www.paypal.com/donate/?hosted_button_id=J3NY5KH92LC7L')).pack()
+        dbtn = ttk.Button(top_frame,image=db_im2,padx=10, pady=10, command=lambda: callback('https://www.paypal.com/donate/?hosted_button_id=J3NY5KH92LC7L'))
+        dbtn.grid(row=1, column = 0)
+        qr_im = ImageTk.PhotoImage(Image.open(os.path.join(init_dir,'Donate QR Code.png')).resize((100,100)))
+        dlabel = ttk.Label(top_frame,image=qr_im,padx=10, pady=10)
+        dbtn.grid(row=1, column = 2)
         top.mainloop()
 
     def warn_window(self, warning,  buttons=1, b_text=['OK'], width=300, height=100):

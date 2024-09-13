@@ -637,7 +637,7 @@ class MainWindow(tk.Tk):
         self.tk.call("source",os.path.join(init_dir,theme,theme+".tcl"))
 
         self.style.theme_use(theme)
-        self.style.configure('TButton', padding= [4, 4,4,4])
+        self.style.configure('TButton', padding= [4, 4,4,4], anchor=tk.CENTER)
         self.style.map('TButton.border',
             relief=[('pressed', 'sunken'),
                     ('!pressed', 'raised')])   
@@ -650,8 +650,6 @@ class MainWindow(tk.Tk):
                         ('active', used_colors["current"])],       
             highlightcolor=[('focus', 'green'),
                             ('!focus', 'red')])
-            #relief=[('pressed', 'sunken'),
-            #        ('!pressed', 'raised')])
         
         self.style.configure('TButton', padding= [4, 2,4,2])
         self.style.map('TButton',
@@ -673,15 +671,40 @@ class MainWindow(tk.Tk):
         self.style.configure('City.Build.TButton')
         self.style.map('City.Build.TButton', 
                        background=[('active', used_colors["city"]),
+                        ('!active','pressed', used_colors["city"]), 
+                        ('!active','white')]) 
+
+        self.style.configure('Flag.Build.TButton')
+        self.style.map('Flag.Build.TButton', 
+                       background=[('active', used_colors["flag"]),
+                        ('!active','pressed', used_colors["flag"]), 
+                        ('!active','white')]) 
+
+        self.style.configure('Rock.Build.TButton')
+        self.style.map('Rock.Build.TButton', 
+                       foreground=[('active','blue'),  
+                                   ('!active','pressed', 'white'),
+                                   ('!active','black')],
+                       background=[('active', used_colors["rock"]),
+                        ('!active','pressed', used_colors["rock"]), 
+                        ('!active','white')]) 
+
+        self.style.configure('HQ.Build.TButton')
+        self.style.map('HQ.Build.TButton', 
+                       background=[('active', used_colors["hq"]),
                         ('!active','pressed', used_colors["hq"]), 
+                        ('!active','white')]) 
+
+        self.style.configure('Trap.Build.TButton')
+        self.style.map('Trap.Build.TButton', 
+                       background=[('active', used_colors["trap"]),
+                        ('!active','pressed', used_colors["trap"]), 
                         ('!active','white')]) 
         
         self.style.configure('CG.TButton')                     
         self.style.map('CG.TButton',
             highlightcolor=[('focus', 'green'),
                             ('!focus', 'red')])
-            #relief=[('pressed', 'sunken'),
-            #        ('!pressed', 'raised')])
         
         self.style.configure('Erase.TButton') 
         self.style.map('Erase.TButton',       
@@ -716,22 +739,21 @@ class MainWindow(tk.Tk):
         self.assign_button = ttk.Button(bt_frame, text='Assign',style='Assign.TButton', command=self.assignMode)
         self.assign_button.grid(row = 0, column=10, sticky='news',padx=fpadx, pady=fpady)
 
-
         #buildings
         #self.city_button = tk.Button(bt_frame, text='City', activebackground=City().color, command=self.printCity)
         self.city_button = ttk.Button(bt_frame, text='City',style='City.Build.TButton', command=self.printCity)
         self.city_button.grid(row = 1, column=1, sticky='news',padx=fpadx, pady=fpady)
 
-        self.flag_button = ttk.Button(bt_frame, text='Flag',style='Build.TButton', command=self.printFlag)
+        self.flag_button = ttk.Button(bt_frame, text='Flag',style='Flag.Build.TButton', command=self.printFlag)
         self.flag_button.grid(row=1, column=2, sticky='news',padx=fpadx, pady=fpady)
 
-        self.rock_button = ttk.Button(bt_frame, text='Rock',style='Build.TButton', command=self.printRock)
+        self.rock_button = ttk.Button(bt_frame, text='Rock',style='Rock.Build.TButton', command=self.printRock)
         self.rock_button.grid(row=1, column=3, sticky='news',padx=fpadx, pady=fpady)
 
-        self.hq_button = ttk.Button(bt_frame, text=' HQ ',style='Build.TButton', command=self.printHQ)
+        self.hq_button = ttk.Button(bt_frame, text=' HQ ',style='HQ.Build.TButton', command=self.printHQ)
         self.hq_button.grid(row=1, column=4, sticky='news',padx=fpadx, pady=fpady)
 
-        self.trap_button = ttk.Button(bt_frame, text='Trap',style='Build.TButton', command=self.printTrap)
+        self.trap_button = ttk.Button(bt_frame, text='Trap',style='Trap.Build.TButton', command=self.printTrap)
         self.trap_button.grid(row=1, column=5, sticky='news',padx=fpadx, pady=fpady)
 
         self.coord_button = ttk.Button(bt_frame, text='Coords',style='CG.TButton', command=self.printCoords)
@@ -798,10 +820,11 @@ class MainWindow(tk.Tk):
         db_im2 = ImageTk.PhotoImage(Image.open(os.path.join(init_dir,'donate-button4.png')).resize((100,100)))
         dbtn = ttk.Button(top_frame,image=db_im2, style='TButton', command=lambda: callback('https://www.paypal.com/donate/?hosted_button_id=J3NY5KH92LC7L'))
         dbtn.grid(row=1, column = 0)
-        qr_im = ImageTk.PhotoImage(Image.open(os.path.join(init_dir,'Donate QR Code.png')).resize((100,100)))
         
+        qr_im = ImageTk.PhotoImage(Image.open(os.path.join(init_dir,'Donate QR Code.png')).resize((100,100)))
         dlabel = ttk.Label(top_frame,image=qr_im,style='TLabel')
         dlabel.grid(row=1, column = 2)
+
         top.mainloop()
 
     def warn_window(self, warning,  buttons=1, b_text=['OK'], width=300, height=100):

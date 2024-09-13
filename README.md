@@ -30,7 +30,14 @@ As the game has a 45° isometric view, it is not always easy to get the  game gr
 Therefore, the Hive can be displayed in Ismetric View to have the same orientation as in the game!
 ![Isometric View of the Hive, including Assignments](Screenshot%20Isometric.png)
 
-## Just play with it
+## Getting started
+You can either download 
+* The Python code + the "hive" folder.
+  Only standard libraries are used, so no need for any packages to be installed
+* The executable file in the "Executable" folder + the "_internal" folder
+* The zip file in the "Executable" folder
+  
+### Just play with it
 This is a very early version of the tool, so just try it out, and send me some feedback!
 Whether it's a bug report, a feature you'd like to have added, general criticism or just a few nice words,
 everything is appreciated!

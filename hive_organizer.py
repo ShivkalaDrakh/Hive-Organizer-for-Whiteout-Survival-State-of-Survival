@@ -775,7 +775,7 @@ class MainWindow(tk.Tk):
         self.active_button = None
         self.buildings = set(['HQ','City','Flag','Trap','Rock'])
 
-    def donate(self, width=300, height=300):
+    def donate(self, width=300, height=350):
         top=tk.Toplevel(self)
         top.details_expanded = False
 
@@ -790,12 +790,18 @@ class MainWindow(tk.Tk):
         top_frame.grid_propagate(0)
         top_frame.pack()
 
+        text_label = ttk.Label(top_frame,wraplength=width-20,
+                               text="If you use and like Hive Organizer, I would appreciate a small donation!\n\nThis allows me to further improve and update the tool.\n\nThink about it as buying a Pack in the Game!\n\nThere are \nCommon Donation Packs, \nEpic Donation Packs, \nand \nMythic Donation Packs ;)\n",
+                               style='TLabel', justify='center', padding=[10,10,10,10])
+        text_label.grid(row=0, column=0, columnspan=3)
+        
         db_im2 = ImageTk.PhotoImage(Image.open(os.path.join(init_dir,'donate-button4.png')).resize((100,100)))
-        dbtn = ttk.Button(top_frame,image=db_im2,padx=10, pady=10, command=lambda: callback('https://www.paypal.com/donate/?hosted_button_id=J3NY5KH92LC7L'))
+        dbtn = ttk.Button(top_frame,image=db_im2, style='TButton', command=lambda: callback('https://www.paypal.com/donate/?hosted_button_id=J3NY5KH92LC7L'))
         dbtn.grid(row=1, column = 0)
         qr_im = ImageTk.PhotoImage(Image.open(os.path.join(init_dir,'Donate QR Code.png')).resize((100,100)))
-        dlabel = ttk.Label(top_frame,image=qr_im,padx=10, pady=10)
-        dbtn.grid(row=1, column = 2)
+        
+        dlabel = ttk.Label(top_frame,image=qr_im,style='TLabel')
+        dlabel.grid(row=1, column = 2)
         top.mainloop()
 
     def warn_window(self, warning,  buttons=1, b_text=['OK'], width=300, height=100):

@@ -193,7 +193,7 @@ class MembersList(tk.Toplevel):
         self.title("Alliance Members List")
         self.geometry(geometry)
         
-        tk.Button(self, text="Close", command=self.destroy).pack()
+        tk.Button(self, text="Close", command=self.remove).pack()
         self.members_list = tk.Text(self)
         self.members_list.pack(fill='y', expand=True)
         self.members_list.tag_configure("current_line", background=used_colors["current"])
@@ -208,6 +208,38 @@ class MembersList(tk.Toplevel):
         self.members_list.tag_add("current_line", "2.0", "2.end")
         #select name by mouse klick
         self.bind('<Button-1>', self.selectName)
+
+    def remove(self):
+        #check if there are any assignments
+        #if yes, warn window
+        #if not, destroy
+        if self.members_list.tag_ranges("assigned"):
+            response = self.master.warn_window('Default setting will remove current assignments!\nDo you want to proceed?', buttons = 2, b_text=['Yes','No'])
+        else:
+            self.destroy() 
+        if response == 'yes':  
+            cities=self.master.paint_canvas.cities
+            for member, city in cities.items():
+                self.removeCityAssignment(city, member)
+            #clear cities as removeCityAssignment doesn't do this at the moment
+            cities.clear()
+            self.destroy()  
+
+    def removeCityAssignment(self, city, member_name):
+        #remove the city from the assignment list and delete the number
+        ml=self.members_list
+        canvas = self.master.paint_canvas
+        #find city on canvas
+        text_field = set(canvas.find_overlapping(*canvas.coords(city))).intersection(set(canvas.find_withtag('member')))
+        #remove number
+        canvas.delete(*text_field)
+        #remove tag
+        canvas.dtag(city, member_name)
+        line=ml.search(member_name,'1.0').split('.')[0]
+        ml.tag_remove("assigned",line+'.0',line+'.end')
+        #remove from list of assigned cities
+        #TODO: this doesn_t work with iterations
+        #canvas.cities.pop(member_name)
 
     def selectName(self,event):
         #select the klicked name
@@ -540,7 +572,7 @@ class PaintCanvas(tk.Canvas):
         self.addtag_withtag('assigned',city)
         #remove old assignement as one member can have only one city
         if member_name in self.cities.keys():
-            #TODO make function or method of City()
+            #TODO make function or method of MembersList()
             old_city = self.cities[member_name]
             text_field = set(self.find_overlapping(*self.coords(old_city))).intersection(set(self.find_withtag('member')))
             self.delete(*text_field)
@@ -1177,9 +1209,11 @@ class MainWindow(tk.Tk):
         try:
             if self.MembersList.winfo_exists():
                 self.updateMembersList(lines)
+                return
+        #either there never was a members list or the window was closed:
         except AttributeError:
-            self.MembersList = MembersList(lines,geometry=("{}x{}+{}+{}".format(250, self.winfo_height(),self.winfo_x()+self.winfo_width(),self.winfo_y())))
-
+            pass
+        self.MembersList = MembersList(lines,geometry=("{}x{}+{}+{}".format(250, self.winfo_height(),self.winfo_x()+self.winfo_width(),self.winfo_y())))
 
     def updateMembersList(self,ml_data):
         #what to do if new List is loaded when list already exists

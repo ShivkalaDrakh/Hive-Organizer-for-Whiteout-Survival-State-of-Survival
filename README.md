@@ -1,11 +1,32 @@
-<h1><center>Hive Organizer</center></h1>
-<h3>A tool for Whiteout Survival and State of Survival</h3>
-<p>
+# Hive Organizer</center> 
+### A tool for Whiteout Survival and State of Survival
+
 The Hive Organizer is a tool for alliance leaders and co-leaders to optimize and organize the hive of the alliance.
 Easy to build from scratch, load a predefined hive, edit your own, and allocate your alliance members!
-</p>
 
-<p>Move members around by DnD there cities, enter terrain obstacles or move a whole bunch of buildings with one simple
+Move members around by DnD there cities, enter terrain obstacles or move a whole bunch of buildings with one simple
 action!
-</p>
+### Build your Hive
+Add Cities, Flags, HQ, Trap and Obstacles (Rocks) 
+![Picture of sample Hive](Screenshot%20Setup.png)
+
+### Assign Member Positions
+Just Click on the Member name and the city position (in Assign Mode)
+![Picture of sample Hive with assigned Members](Screenshot%20Assign.png)
+
+The City is then assigned to the Member, the number on the City corresponding to the number in the Member List.
+A Mouse-over over the City shows the name of the alliance member. Overwritting and re-positioning is just as easy.
+(Video will be added)
+
+### Re-build and modify
+Whether you want to just move a few buildings around or a whole block of Cities and Flags, just right-click-drag 
+an area and move the seleced buildings in one go.
+![Select multiple Buildings](Screenshot%20Select.png)
+
+![Move seleced Buildings](Screenshot%20Moved.png)
+
+### Isometric View
+As the game has a 45° isometric view, it is not always easy to get the  game grid correctly alligned with the buildings.
+Therefore, the Hive can be displayed in Ismetric View to have the same orientation as in the game!
+![Isometric View of the Hive, including Assignments](Screenshot%20Isometric.png)
 

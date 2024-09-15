@@ -22,12 +22,8 @@ import math
 import os
 from tkinter.filedialog import asksaveasfilename, askopenfilename
 from tkinter import ttk
-import webbrowser
 from PIL import Image, ImageTk
-
-
-def callback(url):
-    webbrowser.open_new(url)
+from utils import callweb, listadd, listsub, center, VerticalScrolledText
 
 # script dir will be used as initial for load/save
 script_dir=os.path.dirname(os.path.realpath(__file__))
@@ -101,26 +97,6 @@ class Block():
         coords = [self.canvas.origin[0]+grid_coords[0]*self.multiplier*2, self.canvas.origin[1] - grid_coords[1]*self.multiplier*2]
         return coords
     
-    """def convCoord2Grid(self,coords):
-        #convert normal coordinates into grid positions and lock into grid
-        #Attention: for CANVAS coordinates POSITIVE Y is DOWN
-        #but for GRID coordinates POSITIVE Y is UP!   
-    
-        grid_coords = [0,0]
-        #objects of even size need to shift by 0.5 grid points as origin is at a half-point
-        grid_shift = (self.size+1)%2*0.5
-        #move to closest grid line, not only to the right...
-        #Y coord is negative, see above
-        dummy_c = [(coords[0]-self.canvas.origin[0])/(self.multiplier*2), (-coords[1]+self.canvas.origin[1])/(self.multiplier*2)]
-        round_c = [round((coords[0]-self.canvas.origin[0])/(self.multiplier*2)), round((-coords[1]+self.canvas.origin[1])/(self.multiplier*2))]
-        for i in range(2):
-            if dummy_c[i] > round_c[i]:
-                grid_coords[i] = round_c[i] + grid_shift
-            else:
-                grid_coords[i] = round_c[i] - grid_shift
-
-        return grid_coords"""
-    
     def box(self,center,grid = False,floor=False):
         #gives upper left and lower right coordinates from center in 
         # canvas coordinates (grid = False, default) or
@@ -165,27 +141,8 @@ class Rock(Block):
      def __init__(self,size=2, area=0,coords=[0,0],color=used_colors["rock"], tag='Rock'):
           super().__init__(size, area,coords,color,tag)  
 
-def listadd(a,b):
-    #subtrahiert list b von liste a
-    if len(a) is not len(b):
-        return []
-    result_list = list(map(lambda x,y: x+y,a,b))
-    return result_list
-
-def listsub(a,b):
-    #subtrahiert list b von liste a
-    if len(a) is not len(b):
-        return []
-    result_list = list(map(lambda x,y: x-y,a,b))
-    return result_list
-
-def center(box):
-    #center point of the rectangle
-    return [(box[0]+box[2])/2 , (box[1]+box[3])/2]
-
 class MembersList(tk.Toplevel):
     # Defines the window with the list of member names
-    #TODO: Scroll function
     def __init__(self,lines,geometry='100x100+100+100'):
         super().__init__()
         self.lines = lines
@@ -193,9 +150,14 @@ class MembersList(tk.Toplevel):
         self.title("Alliance Members List")
         self.geometry(geometry)
         
-        tk.Button(self, text="Close", command=self.remove).pack()
-        self.members_list = tk.Text(self)
+        close_button=tk.Button(self, text="Close", command=self.remove)
+        close_button.pack()
+
+        self.members_frame= VerticalScrolledText(self)
+        self.members_frame.pack(fill='y', expand=True)
+        self.members_list = self.members_frame.textbox
         self.members_list.pack(fill='y', expand=True)
+
         self.members_list.tag_configure("current_line", background=used_colors["current"])
         self.members_list.tag_configure("assigned", background=used_colors["assign"])
         self.members_list.tag_raise("current_line", "assigned")
@@ -216,7 +178,8 @@ class MembersList(tk.Toplevel):
         if self.members_list.tag_ranges("assigned"):
             response = self.master.warn_window('Default setting will remove current assignments!\nDo you want to proceed?', buttons = 2, b_text=['Yes','No'])
         else:
-            self.destroy() 
+            self.destroy()
+            return
         if response == 'yes':  
             cities=self.master.paint_canvas.cities
             for member, city in cities.items():
@@ -252,6 +215,7 @@ class MembersList(tk.Toplevel):
     def merge(self,new_members):
         #merge new list of names with existing one
         old_list = self.members_list.get('1.0','end')
+        self.members_list.tag_remove("current_line",'1.0',"end")
         for new_member in new_members:
             #remove whitespaces and CR at start and end of name
             new_member=new_member.strip()
@@ -274,9 +238,12 @@ class MembersList(tk.Toplevel):
             new_idx = self.getNewNumber()
         except ValueError:
             new_idx=100+int(line_num)
-        #Cont here
+        #Add new member and give them focus
+        new_line = int(line_num)+1
         ml.tag_remove("current_line",'1.0','end')
-        ml.insert(str(int(line_num)+1)+'.0','\n'+str(new_idx)+'. '+member_name,"current_line") 
+        # put CR at end of last line
+        ml.insert(line_num+'.end','\n')
+        ml.insert(str(new_line)+'.0',str(new_idx)+'. '+member_name,"current_line") 
 
     def getNewNumber(self):
         #get all numbers currently used in the MembersList
@@ -548,20 +515,26 @@ class PaintCanvas(tk.Canvas):
                 return building
         return None
     
-    def assignMember(self,ml,city):
+    def assignMember(self,ML,city):
         #assign selected member to building
-        #ml: MembersList
+        #ML: MembersList
+        ml = ML.members_list
         cl_index = ml.tag_ranges("current_line")
         #check if there actually is a current line
         #otherwise ignore it
         if not cl_index:
             return
+        #if there is more than one "current_line", take first
+        #  This case should never happen
+        if len(cl_index) > 2:
+            cl_index=cl_index[0:2]
+
         current_line = ml.get(*cl_index).split('.')
         try:
             member_num = int(current_line[0])
         except ValueError:
             #no number in line, so add it
-            member_num = ml.master.getNewNumber()
+            member_num = ML.getNewNumber()
             ml.insert(cl_index[0],str(member_num)+'. ',"current_line")
             #update tag
             cl_index = ml.tag_ranges("current_line")
@@ -656,7 +629,7 @@ class MainWindow(tk.Tk):
 
         #define buttons and button actions
         # size depending on screen size
-        geo_fac = 0.7
+        geo_fac = 0.5
         wwidth = self.winfo_screenwidth()*geo_fac
         wheight = self.winfo_screenheight()*geo_fac
         
@@ -850,7 +823,7 @@ class MainWindow(tk.Tk):
         text_label.grid(row=0, column=0, columnspan=3)
         
         db_im2 = ImageTk.PhotoImage(Image.open(os.path.join(init_dir,'donate-button4.png')).resize((100,100)))
-        dbtn = ttk.Button(top_frame,image=db_im2, style='TButton', command=lambda: callback('https://www.paypal.com/donate/?hosted_button_id=J3NY5KH92LC7L'))
+        dbtn = ttk.Button(top_frame,image=db_im2, style='TButton', command=lambda: callweb('https://www.paypal.com/donate/?hosted_button_id=J3NY5KH92LC7L'))
         dbtn.grid(row=1, column = 0)
         
         qr_im = ImageTk.PhotoImage(Image.open(os.path.join(init_dir,'Donate QR Code.png')).resize((100,100)))
@@ -1074,12 +1047,9 @@ class MainWindow(tk.Tk):
             except TypeError:
                 print(f'No {tag} found!')
                 obj_info = []
-        #Debug
-        obj_info_str = tag+': '+str(obj_info)+'\n'
 
+        obj_info_str = tag+': '+str(obj_info)+'\n'
         return obj_info_str.encode('ascii', errors='xmlcharrefreplace')
-        #EndDebug
-        #return obj_info
 
     def saveLayout(self):
         #save buildings and assignments to file
@@ -1103,7 +1073,6 @@ class MainWindow(tk.Tk):
         with open(save_file,'wb') as file:
             for enc_line in building_info:
                 file.write(enc_line)
-        #End Debug
             #if member list exists, save it
             if member_list is not None:
                 line = 'MemberList: '+'\n'.join(member_list)
@@ -1137,9 +1106,12 @@ class MainWindow(tk.Tk):
                 try:
                     if self.MembersList.winfo_exists():
                         self.updateMembersList(ml_data)
+                    else:
+                        self.MembersList = MembersList(ml_data,geometry=("{}x{}+{}+{}".format(250, self.winfo_height(),self.winfo_x()+self.winfo_width(),self.winfo_y())))
+                        #remove active player tag
+                        self.MembersList.members_list.tag_remove("current_line",'1.0','end')                       
                 # there is no list
                 except AttributeError:
-                    pass
                     self.MembersList = MembersList(ml_data,geometry=("{}x{}+{}+{}".format(250, self.winfo_height(),self.winfo_x()+self.winfo_width(),self.winfo_y())))
                     #remove active player tag
                     self.MembersList.members_list.tag_remove("current_line",'1.0','end')
@@ -1195,7 +1167,7 @@ class MainWindow(tk.Tk):
                             #if member is not found, add them to the list
                             else:
                                 self.MembersList.addMember(member_name)
-                            self.paint_canvas.assignMember(self.MembersList.members_list,city=city)
+                            self.paint_canvas.assignMember(self.MembersList,city=city)
 
         #paint origin
         canvas.create_rectangle(canvas.origin[0]-1,canvas.origin[1]-1,canvas.origin[0]+1,canvas.origin[1]+1)    
@@ -1374,7 +1346,7 @@ def selectBlock(event):
                     canvas.addtag('erase', 'withtag', select)
                 #if the selected building is a city and the assign mode is on, assign city to member
                 elif canvas.assign_mode and 'City' in canvas.gettags(select):    
-                    canvas.assignMember(ml=canvas.master.MembersList.members_list,city=select)
+                    canvas.assignMember(ML=canvas.master.MembersList,city=select)
                     # No selection in assign mode!
                     canvas.dtag('all', 'selected')
                 else:

@@ -35,11 +35,6 @@ jobs:
     - name: Install virtual envs and dependencies
       run: |
           python -m pip install --upgrade pipenv wheel
-
-    - name: Install pipenv dependencies
-      if: steps.cache-pipenv.outputs.cache-hit != 'true'
-      run: |
-          pipenv install --deploy --dev
           
     - name: check run
       run: pipenv run hive_organizer.py

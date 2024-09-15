@@ -5,9 +5,9 @@ name: Python app on Ubuntu
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "GitHub-run-test" ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ "GitHub-run-test" ]
 
 permissions:
   contents: read

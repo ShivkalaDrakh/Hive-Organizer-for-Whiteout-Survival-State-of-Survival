@@ -37,4 +37,4 @@ jobs:
           python -m pip install --upgrade pipenv wheel
           
     - name: check run
-      run: pipenv run *
+      run: pipenv run python hive_organizer.py

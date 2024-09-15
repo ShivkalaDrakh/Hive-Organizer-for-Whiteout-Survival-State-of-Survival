@@ -29,4 +29,4 @@ jobs:
         pip install flake8 pytest
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
     - name: check run
-      run: python hive-organizer.py
+      run: python hive_organizer.py

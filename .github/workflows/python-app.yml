@@ -17,7 +17,7 @@ jobs:
   build:
 
     runs-on: ubuntu-latest
-
+    timeout-minutes: 5
     steps:
     - uses: actions/checkout@v4
     - name: Set up Python 3.10
@@ -37,4 +37,4 @@ jobs:
           python -m pip install --upgrade pipenv wheel
           
     - name: check run
-      run: pipenv run hive_organizer.py
+      run: pipenv run *

@@ -24,25 +24,12 @@ from tkinter.filedialog import asksaveasfilename, askopenfilename
 from tkinter import ttk
 from PIL import Image, ImageTk
 from hive.utils import callweb, listadd, listsub, center, VerticalScrolledText
+from hive.styles import initStyle, used_colors
 
 # script dir will be used as initial for load/save
 script_dir=os.path.dirname(os.path.realpath(__file__))
 init_dir =os.path.join(script_dir,'hive')
 save_dir = os.path.join(init_dir,'save')
-
-#color dictionary
-used_colors = { "assign":"#99ee99",
-                "current" : "#e9e999",
-                "text" : 'orange',
-                "floor" : "#dd6666",
-                "city" : "grey",
-                "flag" : "cyan",
-                "rock" : "black",
-                "hq" : "green",
-                "trap" : "yellow",
-                "erase1" : "purple",
-                "erase2" : "red" 
-                   }
 
 class Block():
     def __init__(self,size=0, area=0,coords=[0,0], color='red',tag = '',multiplier=5, id=dict(), floor_color=used_colors["floor"], text_color =used_colors["floor"]):
@@ -145,17 +132,23 @@ class MembersList(tk.Toplevel):
     # Defines the window with the list of member names
     def __init__(self,lines,geometry='100x100+100+100'):
         super().__init__()
+        self.style = self.master.style
         self.lines = lines
         #buld member list and show in seperate Window
         self.title("Alliance Members List")
         self.geometry(geometry)
         
-        close_button=tk.Button(self, text="Close", command=self.remove)
+        upper_frame = ttk.Frame(self)
+        #upper_frame.pack()
+        upper_frame.pack(fill='x')
+        close_button=ttk.Button(upper_frame, text="Close", style='TButton', command=self.remove)
         close_button.pack()
 
         self.members_frame= VerticalScrolledText(self)
         self.members_frame.pack(fill='y', expand=True)
         self.members_list = self.members_frame.textbox
+        #self.members_list.config(bg=self.style.lookup('Button.label','background'),
+        #                         fg=self.style.lookup('Button.label','foreground'))
         self.members_list.pack(fill='y', expand=True)
 
         self.members_list.tag_configure("current_line", background=used_colors["current"])
@@ -336,12 +329,9 @@ class PaintCanvas(tk.Canvas):
         # and grid coordinates in lower left corner
         if self.print_coords:
             text='{}, {}'.format(str(event.x), str(event.y))
-            #TODO: need a real conversion to grid
-            #db = DummyBlock()
-            #dummy = db.paint(self, coords=[0, 0])
+            # convert canvas coordinates to grid coordinates
             grid = self.convCoord2Grid([event.x, event.y])
-            #self.delete(dummy)
-            #self.removeBuilding(dummy)
+
             text_grid = 'Grid: {}, {}'.format(str(grid[0]), str(grid[1]))
             c_coords = self.find_withtag('c_coords')
             g_coords = self.find_withtag('g_coords')
@@ -376,17 +366,6 @@ class PaintCanvas(tk.Canvas):
             return
         #if it's not in the building list, just delete it from the canvas
         self.delete(building)
-
-    """def getBuilding(self ,building):
-        #get building Block
-        #use only first, if list is given
-        if isinstance(building,list):
-            building=building[0]
-        for block in self.buildings:
-            if building in block.id.values():
-                return block
-        #if for some reason building is not in list just return the input
-        return building"""
     
     def moveBuilding(self, building, center, grid=False, rel=False):
         #move the selected building with all it:s appendices
@@ -636,90 +615,8 @@ class MainWindow(tk.Tk):
         fpady = 3
         fpadx = 5
 
-        #ttk styles
-        self.style = ttk.Style()
-        theme='black'
-        self.tk.call("source",os.path.join(init_dir,theme,theme+".tcl"))
-
-        self.style.theme_use(theme)
-        self.style.configure('TButton', padding= [4, 4,4,4], anchor=tk.CENTER)
-        self.style.map('TButton.border',
-            relief=[('pressed', 'sunken'),
-                    ('!pressed', 'raised')])   
-
-        self.style.configure('Assign.TButton')
-        self.style.map('Assign.TButton',
-            foreground=[('pressed','black'),('active', 'blue')],
-            background=[('disabled', 'grey'),
-                        ('pressed', used_colors["assign"]),
-                        ('active', used_colors["current"])],       
-            highlightcolor=[('focus', 'green'),
-                            ('!focus', 'red')])
-        
-        self.style.configure('TButton', padding= [4, 2,4,2])
-        self.style.map('TButton',
-            relief=[('pressed', 'sunken'),
-                    ('!pressed', 'raised')])        
-        self.style.configure('Build.TButton',
-            padding= [4, 2,4,2])
-        self.style.map('Build.TButton',
-            foreground=[('active','blue'),
-                        ('!active','black')],
-            background=[('active', used_colors["flag"]),
-                        ('!active','white')])              
-        self.style.map('Build.TButton',
-            highlightcolor=[('focus', 'green'),
-                            ('!focus', 'red')],
-            relief=[('pressed', 'sunken'),
-                    ('!pressed', 'raised')])
-        
-        self.style.configure('City.Build.TButton')
-        self.style.map('City.Build.TButton', 
-                       background=[('active', used_colors["city"]),
-                        ('!active','pressed', used_colors["city"]), 
-                        ('!active','white')]) 
-
-        self.style.configure('Flag.Build.TButton')
-        self.style.map('Flag.Build.TButton', 
-                       background=[('active', used_colors["flag"]),
-                        ('!active','pressed', used_colors["flag"]), 
-                        ('!active','white')]) 
-
-        self.style.configure('Rock.Build.TButton')
-        self.style.map('Rock.Build.TButton', 
-                       foreground=[('active','blue'),  
-                                   ('!active','pressed', 'white'),
-                                   ('!active','black')],
-                       background=[('active', used_colors["rock"]),
-                        ('!active','pressed', used_colors["rock"]), 
-                        ('!active','white')]) 
-
-        self.style.configure('HQ.Build.TButton')
-        self.style.map('HQ.Build.TButton', 
-                       background=[('active', used_colors["hq"]),
-                        ('!active','pressed', used_colors["hq"]), 
-                        ('!active','white')]) 
-
-        self.style.configure('Trap.Build.TButton')
-        self.style.map('Trap.Build.TButton', 
-                       background=[('active', used_colors["trap"]),
-                        ('!active','pressed', used_colors["trap"]), 
-                        ('!active','white')]) 
-        
-        self.style.configure('CG.TButton')                     
-        self.style.map('CG.TButton',
-            highlightcolor=[('focus', 'green'),
-                            ('!focus', 'red')])
-        
-        self.style.configure('Erase.TButton') 
-        self.style.map('Erase.TButton',       
-                        background=[('pressed', used_colors["erase2"]),
-                                    ('!pressed',used_colors["erase1"])])                 
-        self.style.map('Erase.TButton',
-            highlightcolor=[('focus', 'green'),
-                            ('!focus', 'red')],
-            relief=[('pressed', 'sunken'),
-                    ('!pressed', 'raised')])
+        #get style
+        self.style = initStyle(self)
 
         #Frame
         bt_frame=ttk.Frame(self, width = wwidth, height = 65)
@@ -763,14 +660,14 @@ class MainWindow(tk.Tk):
 
         self.coord_button = ttk.Button(bt_frame, text='Coords',style='CG.TButton', command=self.printCoords)
         self.coord_button.state(['pressed'])
-        self.coord_button.grid(row=1, column=8, sticky='e',padx=30, pady=fpady)
+        self.coord_button.grid(row=1, column=8, sticky='e',padx=fpadx, pady=fpady)
 
         self.grid_button = ttk.Button(bt_frame, text='Grid', style='CG.TButton', command=self.gridOnOff)
         self.grid_button.state(['pressed'])
         self.grid_button.grid(row=1, column=9, sticky='ew',padx=fpadx, pady=fpady)
 
         self.erase_button = ttk.Button(bt_frame, text='Erase', style='Erase.TButton',command=self.eraseBuilding)
-        self.erase_button.grid(row=1, column=10, sticky='e',padx=30, pady=fpady)
+        self.erase_button.grid(row=1, column=10, sticky='e',padx=fpadx, pady=fpady)
 
         #donate button
         db_im = Image.open(os.path.join(init_dir,'donate-button4.png'))
@@ -1364,18 +1261,6 @@ def selectBlock(event):
                 # Only take highest building, leave loop if found
                 break
         
-        #remove area
-        #if same tag + floor and same center: correct floor selection!
-        """for select in selected:
-            if block is not None and block in canvas.gettags(select) and 'floor' in canvas.gettags(select) and center(canvas.coords(select)) == center(canvas.coords(new_building)):
-                #if erase is on, erase block instead of painting or moving
-                if erase:
-                    canvas.addtag('erase', 'withtag', select)
-                else:
-                    canvas.new_block.append(select)
-                    canvas.itemconfig(select,fill='blue')
-                    canvas.addtag('move', 'withtag', select)
-                #break"""
         if erase:
             eraseBlock(canvas)
             return
@@ -1383,11 +1268,6 @@ def selectBlock(event):
             # define new block type
             canvas.block = eval(f"{block}()")
             canvas.block.canvas= canvas
-                
-    #else:
-    #    canvas.new_block = canvas.block.paint(canvas,[event.x,event.y],grid=False)
-    #    canvas.addtag('move', 'withtag', canvas.new_block)
-    #    canvas.startxy = (event.x, event.y)
 
 def eraseBlock(canvas):
     # simply delete all blocks tagged 'erase'

@@ -22,7 +22,8 @@ import math
 import os
 from tkinter.filedialog import asksaveasfilename, askopenfilename
 from tkinter import ttk
-from PIL import Image, ImageTk
+#from PIL import Image, ImageTk
+from pillow import Image, ImageTk
 from hive.utils import callweb, listadd, listsub, center, VerticalScrolledText
 from hive.styles import initStyle, used_colors
 

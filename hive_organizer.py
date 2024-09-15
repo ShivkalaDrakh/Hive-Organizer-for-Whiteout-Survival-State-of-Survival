@@ -23,7 +23,7 @@ import os
 from tkinter.filedialog import asksaveasfilename, askopenfilename
 from tkinter import ttk
 from PIL import Image, ImageTk
-from utils import callweb, listadd, listsub, center, VerticalScrolledText
+from hive.utils import callweb, listadd, listsub, center, VerticalScrolledText
 
 # script dir will be used as initial for load/save
 script_dir=os.path.dirname(os.path.realpath(__file__))

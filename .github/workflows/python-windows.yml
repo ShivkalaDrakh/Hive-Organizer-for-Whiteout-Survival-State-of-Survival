@@ -32,7 +32,7 @@ jobs:
 
     - name: Build Windows executable
       run: |
-          pipenv run pyinstaller --hidden-import=tkinter --name="HO_win" 
+          pipenv run pyinstaller --hidden-import=tkinter --name="HO_win" hive_organizer.py
     - name: check run
       run: pipenv run hive_organizer.py
       #run: pipenv shell

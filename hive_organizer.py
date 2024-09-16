@@ -257,7 +257,6 @@ class MembersList(tk.Toplevel):
 
 class PaintCanvas(tk.Canvas):
     def __init__(self, master, width=0, height=0, bg='white', print_coords = True):
-        #tk.Canvas().__init__(master=master,width=width, height=height, bg=bg)
         super().__init__(master=master,width=width, height=height, bg=bg)
         self.master = master
         self.width = width

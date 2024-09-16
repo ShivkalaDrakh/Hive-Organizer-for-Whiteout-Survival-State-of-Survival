@@ -26,8 +26,11 @@ def initStyle(win, theme='black'):
     style = ttk.Style()
     #theme='black'
     win.tk.call("source",os.path.join(init_dir,theme,theme+".tcl"))
-
+    
     style.theme_use(theme)
+    #add background color to dictionary
+    bg_color = style.lookup('TButton.label','background')
+    used_colors.update({'bg':bg_color})
     style.configure('TButton', padding= [4,2,4,2], anchor=tk.CENTER)
     style.map('TButton',
         relief=[('pressed', 'sunken'),

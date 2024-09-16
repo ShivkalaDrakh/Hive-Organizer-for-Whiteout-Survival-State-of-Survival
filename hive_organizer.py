@@ -169,9 +169,9 @@ class MembersList(tk.Toplevel):
         #if yes, warn window
         #if not, destroy
         if self.members_list.tag_ranges("assigned"):
-            response = self.master.warn_window('Default setting will remove current assignments!\nDo you want to proceed?', buttons = 2, b_text=['Yes','No'])
+            response = self.master.warn_window('Closing Members List will remove current assignments!\nDo you want to proceed?', buttons = 2, b_text=['Yes','No'])
         else:
-            self.destroy()
+            self.destroy() 
             return
         if response == 'yes':  
             cities=self.master.paint_canvas.cities
@@ -257,7 +257,11 @@ class MembersList(tk.Toplevel):
 
 class PaintCanvas(tk.Canvas):
     def __init__(self, master, width=0, height=0, bg='white', print_coords = True):
+        #tk.Canvas().__init__(master=master,width=width, height=height, bg=bg)
         super().__init__(master=master,width=width, height=height, bg=bg)
+        self.master = master
+        self.width = width
+        self.height = height
         self.origin = [0,0]
 
         self.erase = False
@@ -283,9 +287,11 @@ class PaintCanvas(tk.Canvas):
         self.bind('<B3-Motion>', self.showArea)
         self.bind('<ButtonRelease-3>', self.areaSelect)
 
-        self.makeGrid()
+        #self.makeGrid()
 
     def setup(self):
+        # resize canvas if window resizes
+        self.master.bind("<Configure>", self.on_resize)
         # set origin of grid and activate grid
         self.block = None
         self.buildings=list()
@@ -293,6 +299,30 @@ class PaintCanvas(tk.Canvas):
         self.showMember = None
         self.origin = [self.winfo_width()/2, self.winfo_height()/2]
         self.makeGrid()
+
+    def on_resize(self,event):
+        # when the canvas resizes, Grid and Coordinates need to be updated
+        # end all blocks have to move
+        old_origin = self.origin
+        origin = [self.winfo_width()/2,self.winfo_height()/2]
+        
+        dx = origin[0] - old_origin[0]
+        dy = origin[1] - old_origin[1]
+
+        #if sized changed: 
+        if dx != 0 or dy != 0:
+            # draw new grid
+            self.makeGrid()
+            #remove coordnates
+            self.delete(self.find_withtag('c_coords'))
+            self.delete(self.find_withtag('g_coords'))
+            #move blocks: buildings, assigned numbers, floors, origin
+            blocks_to_move = set(self.find_withtag('building'))
+            blocks_to_move.update(self.find_withtag('member'),
+                                  self.find_withtag('floor'),
+                                  self.find_withtag('origin'))
+            for block in blocks_to_move:
+                self.move(block,dx,dy)
 
     def convCoord2Grid(self,coords,block=None):
         # size of block, if block is
@@ -440,15 +470,21 @@ class PaintCanvas(tk.Canvas):
         #Set Trap at origin
         NewTrap.paint(self,NewTrap.coords)
         #put origin marker
-        self.create_rectangle(self.winfo_width()/2-1,self.winfo_height()/2-1,self.winfo_width()/2+1,self.winfo_height()/2+1)
-        
+        self.originMarker()        
         #then HQ
         HeadQuarter.paint(self,HeadQuarter.coords)
         #floor is under buildings
         self.tag_lower('floor','building')    
 
+    def originMarker(self):
+        #draw the origin
+        om = self.create_rectangle(self.winfo_width()/2-1,self.winfo_height()/2-1,self.winfo_width()/2+1,self.winfo_height()/2+1)
+        self.addtag_withtag('origin',om)
+
     def makeGrid(self,grid_space = 6):
         #draw grid on canvas
+        #first remove existing grid if any
+        self.removeGrid()
         # grid_space: distance betwen grid lines in grid coordinates
         self.origin = [self.winfo_width()/2,self.winfo_height()/2]
         self.grid_on = True
@@ -524,11 +560,11 @@ class PaintCanvas(tk.Canvas):
         self.addtag_withtag('assigned',city)
         #remove old assignement as one member can have only one city
         if member_name in self.cities.keys():
-            #TODO make function or method of MembersList()
             old_city = self.cities[member_name]
-            text_field = set(self.find_overlapping(*self.coords(old_city))).intersection(set(self.find_withtag('member')))
+            ML.removeCityAssignment(old_city,member_name)
+            """text_field = set(self.find_overlapping(*self.coords(old_city))).intersection(set(self.find_withtag('member')))
             self.delete(*text_field)
-            self.dtag(old_city, member_name)
+            self.dtag(old_city, member_name)"""
             self.cities.pop(member_name)
         #and remove previous owner of city (if any)
         if city in self.cities.values():
@@ -618,56 +654,64 @@ class MainWindow(tk.Tk):
         #get style
         self.style = initStyle(self)
 
+        #add border
+        self.config(bd=3, bg=used_colors['bg'])
+        
         #Frame
         bt_frame=ttk.Frame(self, width = wwidth, height = 65)
-        bt_frame.grid(row=0,column=0)
+        bt_frame.grid(row=0,column=0,sticky='news')
+        #Debug
+        bt_frame.columnconfigure(0,weight=1)
+        #End Debug
+        #first column:
+        fc = 1
         self.bt_frame = bt_frame
         #load/save/etc
         self.save_button = ttk.Button(bt_frame, text='Save', command=self.saveLayout)
-        self.save_button.grid(row = 0, column=0, sticky='news',padx=fpadx, pady=fpady)
+        self.save_button.grid(row = 0, column=fc+0, sticky='news',padx=fpadx, pady=fpady)
 
         self.load_button = ttk.Button(bt_frame, text='Load', command=self.loadLayout)
-        self.load_button.grid(row = 0, column=1, sticky='news',padx=fpadx, pady=fpady)
+        self.load_button.grid(row = 0, column=fc+1, sticky='news',padx=fpadx, pady=fpady)
 
         self.isoview_button = ttk.Button(bt_frame, text='Isometric', command=self.isometricView)
-        self.isoview_button.grid(row = 0, column=7, sticky='news',padx=fpadx, pady=fpady)
+        self.isoview_button.grid(row = 0, column=fc+7, sticky='news',padx=fpadx, pady=fpady)
         
         self.default_button = ttk.Button(bt_frame, text='Default', style='TButton', command=self.default)
-        self.default_button.grid(row = 0, column=8, sticky='nes',padx=fpadx, pady=fpady)
+        self.default_button.grid(row = 0, column=fc+8, sticky='nes',padx=fpadx, pady=fpady)
 
         self.members_button = ttk.Button(bt_frame, text='Member List', command=self.loadMembersList)
-        self.members_button.grid(row = 0, column=9, sticky='news',padx=fpadx, pady=fpady)
+        self.members_button.grid(row = 0, column=fc+9, sticky='news',padx=fpadx, pady=fpady)
 
         self.assign_button = ttk.Button(bt_frame, text='Assign',style='Assign.TButton', command=self.assignMode)
-        self.assign_button.grid(row = 0, column=10, sticky='news',padx=fpadx, pady=fpady)
+        self.assign_button.grid(row = 0, column=fc+10, sticky='news',padx=fpadx, pady=fpady)
 
         #buildings
         #self.city_button = tk.Button(bt_frame, text='City', activebackground=City().color, command=self.printCity)
         self.city_button = ttk.Button(bt_frame, text='City',style='City.Build.TButton', command=self.printCity)
-        self.city_button.grid(row = 1, column=1, sticky='news',padx=fpadx, pady=fpady)
+        self.city_button.grid(row = 1, column=fc+1, sticky='news',padx=fpadx, pady=fpady)
 
         self.flag_button = ttk.Button(bt_frame, text='Flag',style='Flag.Build.TButton', command=self.printFlag)
-        self.flag_button.grid(row=1, column=2, sticky='news',padx=fpadx, pady=fpady)
+        self.flag_button.grid(row=1, column=fc+2, sticky='news',padx=fpadx, pady=fpady)
 
         self.rock_button = ttk.Button(bt_frame, text='Rock',style='Rock.Build.TButton', command=self.printRock)
-        self.rock_button.grid(row=1, column=3, sticky='news',padx=fpadx, pady=fpady)
+        self.rock_button.grid(row=1, column=fc+3, sticky='news',padx=fpadx, pady=fpady)
 
         self.hq_button = ttk.Button(bt_frame, text=' HQ ',style='HQ.Build.TButton', command=self.printHQ)
-        self.hq_button.grid(row=1, column=4, sticky='news',padx=fpadx, pady=fpady)
+        self.hq_button.grid(row=1, column=fc+4, sticky='news',padx=fpadx, pady=fpady)
 
         self.trap_button = ttk.Button(bt_frame, text='Trap',style='Trap.Build.TButton', command=self.printTrap)
-        self.trap_button.grid(row=1, column=5, sticky='news',padx=fpadx, pady=fpady)
+        self.trap_button.grid(row=1, column=fc+5, sticky='news',padx=fpadx, pady=fpady)
 
         self.coord_button = ttk.Button(bt_frame, text='Coords',style='CG.TButton', command=self.printCoords)
         self.coord_button.state(['pressed'])
-        self.coord_button.grid(row=1, column=8, sticky='e',padx=fpadx, pady=fpady)
+        self.coord_button.grid(row=1, column=fc+8, sticky='e',padx=fpadx, pady=fpady)
 
         self.grid_button = ttk.Button(bt_frame, text='Grid', style='CG.TButton', command=self.gridOnOff)
         self.grid_button.state(['pressed'])
-        self.grid_button.grid(row=1, column=9, sticky='ew',padx=fpadx, pady=fpady)
+        self.grid_button.grid(row=1, column=fc+9, sticky='ew',padx=fpadx, pady=fpady)
 
         self.erase_button = ttk.Button(bt_frame, text='Erase', style='Erase.TButton',command=self.eraseBuilding)
-        self.erase_button.grid(row=1, column=10, sticky='e',padx=fpadx, pady=fpady)
+        self.erase_button.grid(row=1, column=fc+10, sticky='e',padx=fpadx, pady=fpady)
 
         #donate button
         db_im = Image.open(os.path.join(init_dir,'donate-button4.png'))
@@ -676,17 +720,22 @@ class MainWindow(tk.Tk):
         
         self.donate_button = ttk.Button(bt_frame, image=self.db_im, command=self.donate, cursor='heart')
         #self.donate_button.grid(row = 0, column=12, sticky='ew',padx=fpadx, pady=fpady)
-        self.donate_button.grid(row = 0, rowspan=2, column=12, sticky='ew',padx=fpadx, pady=fpady)
-
+        self.donate_button.grid(row = 0, rowspan=2, column=fc+12, sticky='ew',padx=fpadx, pady=fpady)
+        
+        #last column
+        lc = fc+13 
+        bt_frame.columnconfigure(lc,weight=1)
         bt_frame.grid_propagate(False)
 
         self.iconbitmap(default = os.path.join(init_dir,'icon.ico'))
-
+        
         #setup Canvas
         self.paint_canvas = PaintCanvas(self, width=wwidth, height = wheight, bg='white')
 
         #paint canvas
-        self.paint_canvas.grid(row=1,column=0)
+        self.paint_canvas.grid(row=1,column=0,sticky='news')
+        self.rowconfigure(1, weight=1)
+        self.columnconfigure(0, weight=1)
         self.paint_canvas.erase = False
         self.paint_canvas.print_coords = True
 
@@ -1015,6 +1064,8 @@ class MainWindow(tk.Tk):
             #then add the buildings
             for line in lines:
                 self.buildHive(line)
+            #put origin marker
+            self.paint_canvas.originMarker()   
 
     def buildHive(self,line):
         #paint the Hive from the saved file
@@ -1065,9 +1116,6 @@ class MainWindow(tk.Tk):
                             else:
                                 self.MembersList.addMember(member_name)
                             self.paint_canvas.assignMember(self.MembersList,city=city)
-
-        #paint origin
-        canvas.create_rectangle(canvas.origin[0]-1,canvas.origin[1]-1,canvas.origin[0]+1,canvas.origin[1]+1)    
 
     def loadMembersList(self):
         load_file = askopenfilename(title='Load Member List:',initialdir=save_dir, defaultextension='.txt', filetypes=[('Member List text file','*.txt'), ('All files','*.*')]) 
@@ -1413,7 +1461,7 @@ def pushBuilding(old_bb,new_bb):
             #get deltas to move new_building outside ol_building with minimal distance
             #old_bb: box of existing building in grid coordinates
             #new_bb: box of new building in grid coordinates
-            #TODO: make proper building class and methods
+            #: make proper building class and methods
 
             delta_coord = [0 , 0]
             

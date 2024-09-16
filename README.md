@@ -34,7 +34,10 @@ Therefore, the Hive can be displayed in Ismetric View to have the same orientati
 You can either download 
 * The Python code + the "hive" folder.
   Only standard libraries are used, so no need for any packages to be installed
-* The zip file for Windows in the "Executable" folder
+* For Windows there is a single execuble file (![hive_organizer.exe](Executable/hive_organizer.exe)) in the
+  "Executable" folder. Just download and run it!
+  That's all you need for the Windows application.
+  However, the App is obviously not in the Microsoft Store, so Windows will complain about unauthorized software.
   
 ### Just play with it
 This is a very early version of the tool, so just try it out, and send me some feedback!

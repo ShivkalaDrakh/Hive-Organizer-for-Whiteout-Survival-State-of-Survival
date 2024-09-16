@@ -29,6 +29,10 @@ jobs:
         python -m pip install --upgrade pipenv wheel
         #pip install flake8 pytest
         pip install -r requirements.txt
+
+    - name: Build Linux executable
+      run: |
+          pipenv run pyinstaller --hidden-import=tkinter --name="HO_win" 
     - name: check run
-      #run: pipenv run hive_organizer.py
-      run: pipenv shell
+      run: pipenv run hive_organizer.py
+      #run: pipenv shell

@@ -32,7 +32,8 @@ init_dir =os.path.join(script_dir,'hive')
 save_dir = os.path.join(init_dir,'save')
 
 class Block():
-    def __init__(self,size=0, area=0,coords=[0,0], color='red',tag = '',multiplier=5, id=dict(), floor_color=used_colors["floor"], text_color =used_colors["floor"]):
+    multiplier = 5
+    def __init__(self,size=0, area=0,coords=[0,0], color='red',tag = '', id=dict(), floor_color=used_colors["floor"], text_color =used_colors["floor"]):
         #create a block(building, floor, etc)
         # with:
         # size in grid coordinates
@@ -43,7 +44,6 @@ class Block():
         self.area = area
         self.coords = coords
         self.color = color
-        self.multiplier = multiplier
         self.tag=tag
         self.id = dict()
         self.id.update(id)
@@ -63,18 +63,16 @@ class Block():
         building = canvas.create_rectangle(self.coords[0]-self.size*self.multiplier,self.coords[1]-self.size*self.multiplier,
                                 self.coords[0]+self.size*self.multiplier, self.coords[1]+self.size*self.multiplier, 
                                 fill=self.color,tags=('building',self.tag))
-        #Only add 'real' buildings
-        if not isinstance(self,DummyBlock):
-            self.id.update({'building' : building})
-            canvas.buildings.append(self)
-            #if building provides Area, add it here
-            if self.area > 0:
-                floor=canvas.create_rectangle(self.coords[0]-self.area*self.multiplier,self.coords[1]-self.area*self.multiplier,
-                            self.coords[0]+self.area*self.multiplier, self.coords[1]+self.area*self.multiplier, 
-                            stipple="gray12", fill=self.floor_color,outline ='',tags=('floor',self.tag))
-                canvas.tag_lower(floor)
-                self.id.update({'floor' : floor})
-                return [building, floor]        
+        self.id.update({'building' : building})
+        canvas.buildings.append(self)
+        #if building provides Area, add it here
+        if self.area > 0:
+            floor=canvas.create_rectangle(self.coords[0]-self.area*self.multiplier,self.coords[1]-self.area*self.multiplier,
+                        self.coords[0]+self.area*self.multiplier, self.coords[1]+self.area*self.multiplier, 
+                        stipple="gray12", fill=self.floor_color,outline ='',tags=('floor',self.tag))
+            canvas.tag_lower(floor)
+            self.id.update({'floor' : floor})
+            return [building, floor]        
         return building
     
     def convGrid2Coord(self,grid_coords):
@@ -100,10 +98,6 @@ class Block():
             bbox =[center[0]-size*self.multiplier, center[1]-size*self.multiplier, 
                    center[0]+size*self.multiplier, center[1]+size*self.multiplier]
         return bbox
-    
-class DummyBlock(Block):
-    def __init__(self,size=1, area=0,coords=[0,0],color='',tag = ''):
-          super().__init__(size, area,coords,color,tag)
 
 class Flag(Block):
      def __init__(self,size=1, area=7,coords=[0,0],color=used_colors["flag"],tag = 'Flag',floor_id=0):
@@ -137,7 +131,9 @@ class MembersList(tk.Toplevel):
         #buld member list and show in seperate Window
         self.title("Alliance Members List")
         self.geometry(geometry)
-        
+        #add border
+        self.config(bd=3, bg=used_colors['bg'])
+
         upper_frame = ttk.Frame(self)
         #upper_frame.pack()
         upper_frame.pack(fill='x')
@@ -255,6 +251,21 @@ class MembersList(tk.Toplevel):
         else:
             return 1
 
+class IsoCanvas(tk.Canvas):
+    def __init__(self, master, width=0, height=0, bg='white', print_coords = True):
+        super().__init__(master=master,width=width, height=height, bg=bg)
+
+    def findAssignee(self,id):
+        #find the name of the member assigned to the id of the canvas object
+        ret_val = list(set(self.gettags(id)).intersection(set(self.cities.keys())))
+        #if only one member (which should always be the case) return string, not list
+        if len(ret_val) == 0:
+            return None
+        elif len(ret_val) == 1:
+            ret_val = ret_val[0] 
+        return ret_val
+    
+#TODO: make PaintCanvas sub-class of IsoCAnvas and transfer the relevent methods
 class PaintCanvas(tk.Canvas):
     def __init__(self, master, width=0, height=0, bg='white', print_coords = True):
         super().__init__(master=master,width=width, height=height, bg=bg)
@@ -268,6 +279,7 @@ class PaintCanvas(tk.Canvas):
         self.block = None
         self.grid_on = False
         self.assign_mode = False
+        self.zoom_on = False
         self.buildings=list()
         self.cities = dict()
         self.showMember = None
@@ -297,6 +309,20 @@ class PaintCanvas(tk.Canvas):
         self.cities = dict()
         self.showMember = None
         self.origin = [self.winfo_width()/2, self.winfo_height()/2]
+        self.makeGrid()
+
+    def zoom(self, zoom_factor = 2.0):
+        self.zoom_on = not self.zoom_on
+        origin = self.origin
+        if not self.zoom_on:
+            self.master.zoom_button.state(['!pressed'])
+            zoom_factor = 1/zoom_factor
+        else:
+            self.master.zoom_button.state(['pressed'])
+        #up- or downscale everything
+        self.scale('all',*origin,zoom_factor,zoom_factor)
+        Block.multiplier *= zoom_factor
+        #re-draw the grid
         self.makeGrid()
 
     def on_resize(self,event):
@@ -336,7 +362,7 @@ class PaintCanvas(tk.Canvas):
         #otherwise use default
         else:
             size=0
-            multiplier=Block().multiplier
+            multiplier=Block.multiplier
     
         grid_coords = [0,0]
         #objects of even size need to shift by 0.5 grid points as origin is at a half-point
@@ -591,8 +617,8 @@ class PaintCanvas(tk.Canvas):
         ml.tag_remove("current_line",*cl_index)
 
         #bind to the city (not the text!)
-        self.tag_bind(member_name,'<Enter>',func=lambda event: self.showAssignment(event=event,member=member_name))
-        self.tag_bind(member_name,'<Leave>',func=lambda event: self.showAssignment(event=event,member=member_name))
+        self.tag_bind(member_name,'<Enter>',func=lambda event: showAssignment(event=event,canvas = self))
+        self.tag_bind(member_name,'<Leave>',func=lambda event: showAssignment(event=event,canvas = self))
 
         #then show the number on the city
         x0, y0, *_ = self.coords(city)
@@ -605,36 +631,15 @@ class PaintCanvas(tk.Canvas):
         self.itemconfig(text_id,fill=used_colors["assign"])
         self.tag_lower('building','member')
 
-    def showAssignment(self, event, member):
-        #show name of assigned member in a box
-        #get active object
-        current = self.find_withtag(tk.CURRENT)[0]
-        
-        if event.type == tk.EventType['Enter']:
-            coords = self.coords(current)
-            #cur_cent = center(coords)
-            city_size = City().size*City().multiplier*2
-            #coordinates for box relativ to city
-            # the width of '1' is only a placeholder.
-            # it is made to fit the text below
-            coords_rec = listadd(coords, [0, -city_size, 1,-city_size])
-            # Create box for hover text
-            self.showMember = [self.create_rectangle(*coords_rec,fill='#FCE69a')]
-            #coordinates of text relative to box upper left corner
-            coords_text = listadd(coords_rec, [3, 1 ,0 ,0])
-            self.showMember.append(self.create_text(coords_text[0], coords_text[1], anchor=tk.NW, text=member))
-            #resize box to fit text
-            coords_text = self.bbox(self.showMember[-1])
-            coords_rec = listadd(coords_text,[-3, 0, 3, 0])
-            self.coords(self.showMember[0],*coords_rec)
-        
-        elif event.type == tk.EventType['Leave']:
-            #remove hover field
-            try:
-                self.delete(*self.showMember)
-            #or do nothing if it is not iterable, i.e. is not set yet
-            except TypeError:
-                pass
+    def findAssignee(self,id):
+        #find the name of the member assigned to the id of the canvas object
+        ret_val = list(set(self.gettags(id)).intersection(set(self.cities.keys())))
+        #if only one member (which should always be the case) return string, not list
+        if len(ret_val) == 0:
+            return None
+        elif len(ret_val) == 1:
+            ret_val = ret_val[0] 
+        return ret_val
 
 class MainWindow(tk.Tk):
     def __init__(self):
@@ -655,13 +660,20 @@ class MainWindow(tk.Tk):
 
         #add border
         self.config(bd=3, bg=used_colors['bg'])
-        
+
         #Frame
         bt_frame=ttk.Frame(self, width = wwidth, height = 65)
         bt_frame.grid(row=0,column=0,sticky='news')
-        #Debug
         bt_frame.columnconfigure(0,weight=1)
-        #End Debug
+        
+        #setup Canvas
+        self.paint_canvas = PaintCanvas(self, width=wwidth, height = wheight, bg='white')
+
+        #paint canvas
+        self.paint_canvas.grid(row=1,column=0,sticky='news')
+        self.rowconfigure(1, weight=1)
+        self.columnconfigure(0, weight=1)
+
         #first column:
         fc = 1
         self.bt_frame = bt_frame
@@ -672,34 +684,39 @@ class MainWindow(tk.Tk):
         self.load_button = ttk.Button(bt_frame, text='Load', command=self.loadLayout)
         self.load_button.grid(row = 0, column=fc+1, sticky='news',padx=fpadx, pady=fpady)
 
-        self.isoview_button = ttk.Button(bt_frame, text='Isometric', command=self.isometricView)
-        self.isoview_button.grid(row = 0, column=fc+7, sticky='news',padx=fpadx, pady=fpady)
+        #add a bit of space in between
+        self.dummy= ttk.Label(bt_frame)
+        self.dummy.grid(row = 0, column=fc+7, sticky='news',padx=50, pady=fpady)
+        #self.columnconfigure(fc+7, weight=1)
+
+        self.isoview_button = ttk.Button(bt_frame, text='Isometric', style='TButton', command=self.isometricView)
+        self.isoview_button.grid(row = 0, column=fc+8, sticky='news',padx=fpadx, pady=fpady)
         
         self.default_button = ttk.Button(bt_frame, text='Default', style='TButton', command=self.default)
-        self.default_button.grid(row = 0, column=fc+8, sticky='nes',padx=fpadx, pady=fpady)
+        self.default_button.grid(row = 0, column=fc+9, sticky='nes',padx=fpadx, pady=fpady)
 
         self.members_button = ttk.Button(bt_frame, text='Member List', command=self.loadMembersList)
-        self.members_button.grid(row = 0, column=fc+9, sticky='news',padx=fpadx, pady=fpady)
+        self.members_button.grid(row = 0, column=fc+10, sticky='news',padx=fpadx, pady=fpady)
 
         self.assign_button = ttk.Button(bt_frame, text='Assign',style='Assign.TButton', command=self.assignMode)
-        self.assign_button.grid(row = 0, column=fc+10, sticky='news',padx=fpadx, pady=fpady)
+        self.assign_button.grid(row = 0, column=fc+11, sticky='news',padx=fpadx, pady=fpady)
 
         #buildings
         #self.city_button = tk.Button(bt_frame, text='City', activebackground=City().color, command=self.printCity)
         self.city_button = ttk.Button(bt_frame, text='City',style='City.Build.TButton', command=self.printCity)
-        self.city_button.grid(row = 1, column=fc+1, sticky='news',padx=fpadx, pady=fpady)
+        self.city_button.grid(row = 1, column=fc+0, sticky='news',padx=fpadx, pady=fpady)
 
         self.flag_button = ttk.Button(bt_frame, text='Flag',style='Flag.Build.TButton', command=self.printFlag)
-        self.flag_button.grid(row=1, column=fc+2, sticky='news',padx=fpadx, pady=fpady)
+        self.flag_button.grid(row=1, column=fc+1, sticky='news',padx=fpadx, pady=fpady)
 
         self.rock_button = ttk.Button(bt_frame, text='Rock',style='Rock.Build.TButton', command=self.printRock)
-        self.rock_button.grid(row=1, column=fc+3, sticky='news',padx=fpadx, pady=fpady)
+        self.rock_button.grid(row=1, column=fc+2, sticky='news',padx=fpadx, pady=fpady)
 
         self.hq_button = ttk.Button(bt_frame, text=' HQ ',style='HQ.Build.TButton', command=self.printHQ)
-        self.hq_button.grid(row=1, column=fc+4, sticky='news',padx=fpadx, pady=fpady)
+        self.hq_button.grid(row=1, column=fc+3, sticky='news',padx=fpadx, pady=fpady)
 
         self.trap_button = ttk.Button(bt_frame, text='Trap',style='Trap.Build.TButton', command=self.printTrap)
-        self.trap_button.grid(row=1, column=fc+5, sticky='news',padx=fpadx, pady=fpady)
+        self.trap_button.grid(row=1, column=fc+4, sticky='news',padx=fpadx, pady=fpady)
 
         self.coord_button = ttk.Button(bt_frame, text='Coords',style='CG.TButton', command=self.printCoords)
         self.coord_button.state(['pressed'])
@@ -709,8 +726,11 @@ class MainWindow(tk.Tk):
         self.grid_button.state(['pressed'])
         self.grid_button.grid(row=1, column=fc+9, sticky='ew',padx=fpadx, pady=fpady)
 
+        self.zoom_button = ttk.Button(bt_frame, text='Zoom', style='CG.TButton',command=self.paint_canvas.zoom)
+        self.zoom_button.grid(row=1, column=fc+10, sticky='ew',padx=fpadx, pady=fpady)
+
         self.erase_button = ttk.Button(bt_frame, text='Erase', style='Erase.TButton',command=self.eraseBuilding)
-        self.erase_button.grid(row=1, column=fc+10, sticky='e',padx=fpadx, pady=fpady)
+        self.erase_button.grid(row=1, column=fc+11, sticky='e',padx=fpadx, pady=fpady)
 
         #donate button
         db_im = Image.open(os.path.join(init_dir,'donate-button4.png'))
@@ -719,24 +739,14 @@ class MainWindow(tk.Tk):
         
         self.donate_button = ttk.Button(bt_frame, image=self.db_im, command=self.donate, cursor='heart')
         #self.donate_button.grid(row = 0, column=12, sticky='ew',padx=fpadx, pady=fpady)
-        self.donate_button.grid(row = 0, rowspan=2, column=fc+12, sticky='ew',padx=fpadx, pady=fpady)
+        self.donate_button.grid(row = 0, rowspan=2, column=fc+13, sticky='ew',padx=fpadx, pady=fpady)
         
         #last column
-        lc = fc+13 
+        lc = fc+14 
         bt_frame.columnconfigure(lc,weight=1)
         bt_frame.grid_propagate(False)
 
         self.iconbitmap(default = os.path.join(init_dir,'icon.ico'))
-        
-        #setup Canvas
-        self.paint_canvas = PaintCanvas(self, width=wwidth, height = wheight, bg='white')
-
-        #paint canvas
-        self.paint_canvas.grid(row=1,column=0,sticky='news')
-        self.rowconfigure(1, weight=1)
-        self.columnconfigure(0, weight=1)
-        self.paint_canvas.erase = False
-        self.paint_canvas.print_coords = True
 
         #draw default after starting mainloop
         self.after(100,self.setup)
@@ -837,7 +847,7 @@ class MainWindow(tk.Tk):
             self.activateButton(self.default_button)
 
     def isometricView(self):
-        #test rotation
+        #rotate the Canvas contents by 45° to give isometric view like in the game
         self.rotateCanvas(-45)
 
     def printCity(self):
@@ -900,7 +910,6 @@ class MainWindow(tk.Tk):
         self.paint_canvas.erase = False
         self.erase_button.state(['!pressed'])
         self.paint_canvas.config(cursor='left_ptr')
-
     
     def assignMode(self):
         # check of the window with the member names exists
@@ -1094,7 +1103,6 @@ class MainWindow(tk.Tk):
             for ct in coords_str:
                 coords=(listadd(list(map(float,ct)),self.paint_canvas.origin))
                 #then paint them:
-                #TODO: This is painting the same building multiple times, which does not work with canvas.buildings
                 build_new = eval(command)
                 build_new.paint(canvas, coords,grid=False)
                 #for cities, add they have assigned members
@@ -1103,7 +1111,7 @@ class MainWindow(tk.Tk):
                         ml = self.MembersList.members_list
                         member_coords = member[0:2]
                         member_name = member[2:][0]
-                        #TODO: make method!
+                        
                         #assigned city!
                         if member_coords == ct:
                             city=build_new.id['building']
@@ -1158,9 +1166,10 @@ class MainWindow(tk.Tk):
         top.title("Isometric View")
         top.geometry("{}x{}+{}+{}".format(self.winfo_width(), self.winfo_height()+40,self.winfo_x()+20,self.winfo_y()+20))
         tk.Button(top, text="Close", command=top.destroy).pack()
-        top_canvas = tk.Canvas(top, width=self.winfo_width(), height=self.winfo_height(),bg='white')
+        top_canvas = IsoCanvas(top, width=self.winfo_width(), height=self.winfo_height(),bg='white')
         top_canvas.pack()
-        
+        top_canvas.showMember = None
+        top_canvas.cities = canvas.cities
         cos_val = math.cos(math.radians(angle))
         sin_val = math.sin(math.radians(angle))
         all_stuff = canvas.find_all()
@@ -1205,7 +1214,19 @@ class MainWindow(tk.Tk):
             if 'grid' in tags:
                 top_canvas.create_line(*rot_coords,dash=canvas.itemcget(element,'dash'))
             elif 'building' in tags: 
-                top_canvas.create_polygon(rot_coords, fill=canvas.itemcget(element,'fill'),stipple=canvas.itemcget(element,'stipple'),outline='black')
+                nb=top_canvas.create_polygon(rot_coords, fill=canvas.itemcget(element,'fill'),
+                                        stipple=canvas.itemcget(element,'stipple'),
+                                        outline='black')
+                #for get the tags so that it can be used for hover text
+                if 'City' in tags:
+                    member_name = canvas.findAssignee(element)
+                    #check for an assigned member
+                    if member_name is not None:
+                        top_canvas.addtag_withtag(member_name,nb)
+                        top_canvas.tag_bind(member_name,'<Enter>',func=lambda event: showAssignment(event=event,canvas = top_canvas))
+                        top_canvas.tag_bind(member_name,'<Leave>',func=lambda event: showAssignment(event=event,canvas = top_canvas))
+
+                #get the tags so that it can be used for hover text
             #floor gets no border
             elif 'floor' in tags:
                 top_canvas.create_polygon(rot_coords, fill=canvas.itemcget(element,'fill'),stipple=canvas.itemcget(element,'stipple'),outline='')
@@ -1228,6 +1249,44 @@ def getPoly(coords):
     # upper right
     poly_coords.append([coords[2],coords[1]])
     return poly_coords
+
+def showAssignment(event, canvas):
+    #show name of assigned member in a box
+    #get active object
+
+    current = canvas.find_withtag(tk.CURRENT)[0]
+    #get member from tag of event
+    member = canvas.findAssignee(current)
+    #list(set(canvas.gettags(current)).intersection(set(canvas.cities.keys())))[0] 
+
+    if event.type == tk.EventType['Enter']:
+        coords = canvas.coords(current)
+        #cur_cent = center(coords)
+        city_size = City().size*City().multiplier*2
+        #coordinates for box relativ to city
+        # get minimal y-value, whether it's a rectangle or a polygon
+        coords[1] = min(list(map(lambda x:coords[x], range(1,len(coords),2))))
+        # the width of '0' is only a placeholder.
+        # it is made to fit the text below
+        coords_rec = [coords[0], coords[1]-20, coords[0], coords[1]]
+
+        # Create box for hover text
+        canvas.showMember = [canvas.create_rectangle(*coords_rec,fill='#FCE69a')]
+        #coordinates of text relative to box upper left corner
+        coords_text = listadd(coords_rec, [3, 1 ,0 ,0])
+        canvas.showMember.append(canvas.create_text(coords_text[0], coords_text[1], anchor=tk.NW, text=member))
+        #resize box to fit text
+        coords_text = canvas.bbox(canvas.showMember[-1])
+        coords_rec = listadd(coords_text,[-3, 0, 3, 0])
+        canvas.coords(canvas.showMember[0],*coords_rec)
+    
+    elif event.type == tk.EventType['Leave']:
+        #remove hover field
+        try:
+            canvas.delete(*canvas.showMember)
+        #or do nothing if it is not iterable, i.e. is not set yet
+        except TypeError:
+            pass
 
 
 def selectBlock(event):

@@ -5,9 +5,9 @@ name: Python application
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "GitHub-run-test" ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ "GitHub-run-test" ]
 
 permissions:
   contents: read
@@ -26,7 +26,13 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
+        python -m pip install --upgrade pipenv wheel pyinstaller
         #pip install flake8 pytest
         pip install -r requirements.txt
+
+    - name: Build Windows executable
+      run: |
+          pipenv run pyinstaller --hidden-import=tkinter --name="HO_win" hive_organizer.py
     - name: check run
-      run: python hive_organizer.py
+      run: pipenv run hive_organizer.py
+      #run: pipenv shell

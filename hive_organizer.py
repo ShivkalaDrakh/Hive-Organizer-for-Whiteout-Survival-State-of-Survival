@@ -26,6 +26,8 @@ from PIL import Image, ImageTk
 from hive.utils import callweb, listadd, listsub, center, VerticalScrolledText
 from hive.styles import initStyle, used_colors
 
+#Debug
+print('Okay!')
 # script dir will be used as initial for load/save
 script_dir=os.path.dirname(os.path.realpath(__file__))
 init_dir =os.path.join(script_dir,'hive')

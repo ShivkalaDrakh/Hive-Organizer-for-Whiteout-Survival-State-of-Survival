@@ -5,9 +5,9 @@ name: Python application
 
 on:
   push:
-    branches: [ "GitHub-run-test" ]
+    branches: [ "main" ]
   pull_request:
-    branches: [ "GitHub-run-test" ]
+    branches: [ "main" ]
 
 permissions:
   contents: read
@@ -32,7 +32,7 @@ jobs:
 
     - name: Build Windows executable
       run: |
-          pipenv run pyinstaller --hidden-import=tkinter --name="HO_win" hive_organizer.py
+          pipenv run pyinstaller --hidden-import=tkinter hive_organizer.py --onefile --add-data hive:hive
     - name: check run
       run: pipenv run hive_organizer.py
       #run: pipenv shell

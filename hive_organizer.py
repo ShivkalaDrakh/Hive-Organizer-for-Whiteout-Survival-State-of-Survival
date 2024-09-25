@@ -54,9 +54,6 @@ class Block():
     
     def paint(self,canvas,coords,grid=True):
         self.canvas = canvas
-        #x1,self.coords[1] = (self.coords[0]-self.size)*self.multiplier*2,(self.coords[1]-self.size)*self.multiplier*2
-        
-        #self.coords= [canvas.origin[0]+coords[0]*self.multiplier*2,canvas.origin[1]+coords[1]*self.multiplier*2]
         if grid:
             self.coords = self.convGrid2Coord(coords)
         else:
@@ -201,7 +198,14 @@ class MembersList(tk.Toplevel):
         index_line = self.members_list.index(tk.CURRENT).split('.')[0]
         # set current line and remove old seting
         self.members_list.tag_remove("current_line",'1.0',"end")
-        self.members_list.tag_add("current_line",index_line+'.0',index_line+'.end')
+        #is there a tab that seperates name and coords?
+        #TODO: would be much easier with a table
+        is_tab = self.members_list.search('\t',index_line+'.0')
+        if isinstance(is_tab,str) and is_tab.split('.')[0] == index_line:
+            name_end = is_tab
+        else:
+            name_end = index_line+'.end'
+        self.members_list.tag_add("current_line",index_line+'.0',name_end)
     
     def merge(self,new_members):
         #merge new list of names with existing one
@@ -268,7 +272,7 @@ class IsoCanvas(tk.Canvas):
         return ret_val
     
 #TODO: make PaintCanvas sub-class of IsoCAnvas and transfer the relevent methods
-class PaintCanvas(tk.Canvas):
+class PaintCanvas(IsoCanvas):
     def __init__(self, master, width=0, height=0, bg='white', print_coords = True):
         super().__init__(master=master,width=width, height=height, bg=bg)
         self.master = master
@@ -321,6 +325,9 @@ class PaintCanvas(tk.Canvas):
             zoom_factor = 1/zoom_factor
         else:
             self.master.zoom_button.state(['pressed'])
+        #remove coordnates
+        self.delete(self.find_withtag('c_coords'))
+        self.delete(self.find_withtag('g_coords'))
         #up- or downscale everything
         self.scale('all',*origin,zoom_factor,zoom_factor)
         Block.multiplier *= zoom_factor
@@ -351,7 +358,7 @@ class PaintCanvas(tk.Canvas):
             for block in blocks_to_move:
                 self.move(block,dx,dy)
 
-    def convCoord2Grid(self,coords,block=None):
+    def convCoord2Grid(self,coords,block=None,trap_coords=None):
         # size of block, if block is
         #convert normal coordinates into grid positions and lock into grid
         #Attention: for CANVAS coordinates POSITIVE Y is DOWN
@@ -367,6 +374,7 @@ class PaintCanvas(tk.Canvas):
             multiplier=Block.multiplier
     
         grid_coords = [0,0]
+
         #objects of even size need to shift by 0.5 grid points as origin is at a half-point
         grid_shift = (size+1)%2*0.5
         #move to closest grid line, not only to the right...
@@ -379,16 +387,28 @@ class PaintCanvas(tk.Canvas):
             else:
                 grid_coords[i] = round_c[i] - grid_shift
 
+        #Add Trap Coordinates
+        if trap_coords is not None:
+            #Debug
+            grid_coords = listadd(grid_coords,trap_coords)
         return grid_coords
 
     def showCoords(self, event):
         #show canvas coordinates in lower right corner
         # and grid coordinates in lower left corner
+        trap_coord = None
+        self.master.trap_entry.state(['disabled'])
         if self.print_coords:
+            # if Trap exists, activate Coordinate field
+            if self.find_withtag('Trap'):
+                self.master.trap_entry.state(['!disabled'])
+                trap_coord = self.master.trap_c
             text='{}, {}'.format(str(event.x), str(event.y))
             # convert canvas coordinates to grid coordinates
-            grid = self.convCoord2Grid([event.x, event.y])
-
+            delta=Block.multiplier
+            grid = [event.x-delta, event.y+delta]
+            grid = self.convCoord2Grid(grid,trap_coords=trap_coord) 
+ 
             text_grid = 'Grid: {}, {}'.format(str(grid[0]), str(grid[1]))
             c_coords = self.find_withtag('c_coords')
             g_coords = self.find_withtag('g_coords')
@@ -450,7 +470,6 @@ class PaintCanvas(tk.Canvas):
             else:
                 self.coords(building,*Block().box(center))
                     
-
     def startSelect(self, event):
         #define upper left corner of area
         self.area = [event.x, event.y , 0, 0]
@@ -475,11 +494,11 @@ class PaintCanvas(tk.Canvas):
         #then release the selection frame
         self.delete(self.area_box)    
 
-
     def drawDefault(self):
         #draw HQ, Trap and Grid
         #clear canvas before drawing
         self.delete('all')
+        self.master.resetTrapCoord()
         self.buildings = []
         #but add the grid
         self.makeGrid()
@@ -491,8 +510,6 @@ class PaintCanvas(tk.Canvas):
         #put HQ and Trap
         HeadQuarter = HQ(coords=[-11, 5]) 
         NewTrap = Trap(coords = [0,0])
-
-        #self.origin = [self.winfo_width()/2,self.winfo_height()/2]
 
         #Set Trap at origin
         NewTrap.paint(self,NewTrap.coords)
@@ -583,15 +600,12 @@ class PaintCanvas(tk.Canvas):
             current_line = ml.get(*cl_index).split('.')
             #self.master.warn_window('Member has no number!\nPlease add new number: <XX. MemberName>')
             #return
-        member_name = current_line[1].strip()
+        member_name = current_line[1].rstrip()
         self.addtag_withtag('assigned',city)
         #remove old assignement as one member can have only one city
         if member_name in self.cities.keys():
             old_city = self.cities[member_name]
             ML.removeCityAssignment(old_city,member_name)
-            """text_field = set(self.find_overlapping(*self.coords(old_city))).intersection(set(self.find_withtag('member')))
-            self.delete(*text_field)
-            self.dtag(old_city, member_name)"""
             self.cities.pop(member_name)
         #and remove previous owner of city (if any)
         if city in self.cities.values():
@@ -618,6 +632,14 @@ class PaintCanvas(tk.Canvas):
         #and remove the current selection
         ml.tag_remove("current_line",*cl_index)
 
+        # provide coorinates if trap coordinates are activated
+        if self.master.trap_c is not None:
+            cc = self.coords(city)
+            cc = [cc[0],cc[-1]]
+            cc_grid = [int(dummy) for dummy in self.convCoord2Grid(cc, trap_coords=self.master.trap_c)]
+            #TODO: Make this a table for easier access
+            ml.delete(cl_index[1],str(cl_index[1]).split('.')[0]+'.end')
+            ml.insert(cl_index[1],'\t'+str(cc_grid))
         #bind to the city (not the text!)
         self.tag_bind(member_name,'<Enter>',func=lambda event: showAssignment(event=event,canvas = self))
         self.tag_bind(member_name,'<Leave>',func=lambda event: showAssignment(event=event,canvas = self))
@@ -656,7 +678,7 @@ class MainWindow(tk.Tk):
         
         fpady = 3
         fpadx = 5
-
+        self.trap_c = None
         #get style
         self.style = initStyle(self)
 
@@ -688,7 +710,7 @@ class MainWindow(tk.Tk):
 
         #add a bit of space in between
         self.dummy= ttk.Label(bt_frame)
-        self.dummy.grid(row = 0, column=fc+7, sticky='news',padx=50, pady=fpady)
+        self.dummy.grid(row = 0, column=fc+7, sticky='news',padx=30, pady=fpady)
         #self.columnconfigure(fc+7, weight=1)
 
         self.isoview_button = ttk.Button(bt_frame, text='Isometric', style='TButton', command=self.isometricView)
@@ -720,6 +742,19 @@ class MainWindow(tk.Tk):
         self.trap_button = ttk.Button(bt_frame, text='Trap',style='Trap.Build.TButton', command=self.printTrap)
         self.trap_button.grid(row=1, column=fc+4, sticky='news',padx=fpadx, pady=fpady)
 
+        #Add refernece Trap Coordinates (Trap coordinates shown in the game are always SW corner!)
+        self.trap_coord = tk.StringVar(master=bt_frame, value='X: 0, Y: 0')
+        
+        valCommand= (self.register(self.validateCoord), '%P')
+        self.trap_clabel =ttk.Label(bt_frame,text='Trap Coords:',style='TLabel')
+        self.trap_clabel.grid(row=0, column=fc+5, sticky='ews',padx=fpadx, pady=0)
+        
+        self.trap_entry = ttk.Entry(bt_frame,style='TEntry',textvar=self.trap_coord, width=15, 
+                                    validate='key', validatecommand=valCommand)
+        self.trap_entry.grid(row=1, column=fc+5, sticky='news',padx=fpadx, pady=fpady)
+        self.trap_entry.state(['disabled'])
+
+        # toggle buttons
         self.coord_button = ttk.Button(bt_frame, text='Coords',style='CG.TButton', command=self.printCoords)
         self.coord_button.state(['pressed'])
         self.coord_button.grid(row=1, column=fc+8, sticky='e',padx=fpadx, pady=fpady)
@@ -753,11 +788,41 @@ class MainWindow(tk.Tk):
         #draw default after starting mainloop
         self.after(100,self.setup)
 
+    #function for Trap Coordinate Entry field
+    def validateCoord(self, new_text):
+            #TODO: Show limit of state on canvas
+            #TODO: What if Trap is not in the origin?
+            max_coord = 1199
+            min_coord = 0
+            regex = r'X:\s*(\d*),\s*Y:\s*(\d*)'
+            val_res = re.search(regex, new_text)
+
+            #correct format?
+            if val_res is None:
+                return False
+            else:
+                try:
+                    self.trap_c = [float(val_res.groups()[0]),float(val_res.groups()[1])]
+                    #check correct boundaries
+                    if max(self.trap_c) > max_coord or min(self.trap_c) < min_coord:
+                        print(f'Trap Coordinates have to be between {min_coord} and {max_coord}')
+                        return False
+                    # In the game, trap coordinates are given for lower left corner, not center
+                    # therefore half trap size has to be added in both x and y
+                    self.trap_c = listadd(self.trap_c,[Trap().size/2,Trap().size/2])
+                    return True
+                except ValueError:
+                    return True
+                
     def setup(self):
         #performed once mainloop is started
         self.paint_canvas.setup()
         self.active_button = None
         self.buildings = set(['HQ','City','Flag','Trap','Rock'])
+
+    def resetTrapCoord(self):
+        self.trap_c = None 
+        self.trap_coord.set('X: 0, Y: 0')
 
     def donate(self, width=300, height=350):
         top=tk.Toplevel(self)
@@ -988,12 +1053,13 @@ class MainWindow(tk.Tk):
                     if obj_center in obj_info:
                         continue
                 obj_info.append(obj_center)
-                try:
-                    #is the object an assigned city? 
-                    obj_info.append('€€'+self.assigments[obj]+'€€')
-                except (TypeError, KeyError):
-                    #if not an assigned city, just continue
-                    pass
+                if tag == 'City':
+                    try:
+                        #is the object an assigned city? 
+                        obj_info.append('€€'+self.assigments[obj]+'€€')
+                    except (TypeError, KeyError):
+                        #if not an assigned city, just continue
+                        pass
         #else: could be one or zero
         else:
             try:
@@ -1012,27 +1078,45 @@ class MainWindow(tk.Tk):
         save_file = asksaveasfilename(title='Save Hive as:', defaultextension='.hb', initialdir=save_dir,filetypes=[('Hive Organizer file','*.hb')])
         self.assigments = { id : city for city, id in self.paint_canvas.cities.items()}
         building_info = list()
+        #remove zoom status for saving
+        zoom_status = self.paint_canvas.zoom_on
+        if zoom_status:
+            self.paint_canvas.zoom()
         #get list of lists for all building coordinates
         for building in self.buildings:
             building_info.append(self.buildingInfoEncoder(building))
-
         try:
             self.MembersList.winfo_exists()
             member_list = self.MembersList.members_list.get('1.0','end')
-            #remove leading numbers
-            regex=r'\d+\. (.*)'
+            #remove leading numbers and coordinates
+            regex=r'\d+\. ([^\t\n]*).*'
             member_list = re.findall(regex,member_list)
+            #strip whitespaces
+            member_list = [member.strip() for member in member_list]
         except AttributeError:
             #if no list exists, ignore it
             member_list = None
+        
         #Write one line for each building
         with open(save_file,'wb') as file:
+            #Start with Trap Coordinates if any
+            if self.trap_c is not None:
+                #ensure integer
+                save_tc = listsub(self.trap_c,[Trap().size/2,Trap().size/2])
+                save_tc =[int(c) for c in save_tc]
+                line = 'TrapCoords: '+str(save_tc)+'\n'
+                file.write(line.encode('ascii', errors='xmlcharrefreplace'))
+            #Then Buildings
             for enc_line in building_info:
                 file.write(enc_line)
+
             #if member list exists, save it
             if member_list is not None:
                 line = 'MemberList: '+'\n'.join(member_list)
                 file.write(line.encode('ascii', errors='xmlcharrefreplace'))
+        #set zoom_status back to original setting
+        if zoom_status:
+            self.paint_canvas.zoom()
 
     def loadLayout(self):
         #load previously saved layout
@@ -1081,6 +1165,15 @@ class MainWindow(tk.Tk):
         #paint the Hive from the saved file
         canvas = self.paint_canvas
         block = None
+        #check Trap coordinates:
+        if line.startswith('TrapCoords'):
+            regex = r'\[(\d+),\s*(\d+)\]'
+            f = re.search(regex, line)
+            if f is not None:
+                self.trap_c =[int(f.group(1)), int(f.group(2))]
+                self.trap_coord.set(f'X: {self.trap_c[0]}, Y: {self.trap_c[1]}')
+                #add half size, as origin is now on lower left corner of trap, not at the center
+                self.trap_c = listadd(self.trap_c,[Trap().size/2,Trap().size/2])
         #check building type
         for building in self.buildings:
             if line.startswith(building):
@@ -1093,7 +1186,7 @@ class MainWindow(tk.Tk):
             #build_now = eval(command)
             #find all coordinates of the block
             #there might be negative numbers!
-            regex_assign = r'\[(-?\d+\.\d+),\s*(-?\d+\.\d+)\].{,3}\&#8364;\&#8364;([\w\s]+)\&#8364;\&#8364;'
+            regex_assign = r'\[(-?\d+\.\d+),\s*(-?\d+\.\d+)\].{,3}\&#8364;\&#8364;([^\&]+)\&#8364;\&#8364;'
             regex = r'\[(-?\d+\.\d+),\s*(-?\d+\.\d+)\]'
             coords_str = re.findall(regex,line)
             #result is list of tuples of strings, e.g. [('1.0', '2.5'), ('5.00', '7.25'), ('77.1', '88.8')]
@@ -1264,7 +1357,7 @@ def showAssignment(event, canvas):
     if event.type == tk.EventType['Enter']:
         coords = canvas.coords(current)
         #cur_cent = center(coords)
-        city_size = City().size*City().multiplier*2
+        #city_size = City().size*City().multiplier*2
         #coordinates for box relativ to city
         # get minimal y-value, whether it's a rectangle or a polygon
         coords[1] = min(list(map(lambda x:coords[x], range(1,len(coords),2))))

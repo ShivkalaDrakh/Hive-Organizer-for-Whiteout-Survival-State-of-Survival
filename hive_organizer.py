@@ -23,15 +23,72 @@ import os
 from tkinter.filedialog import asksaveasfilename, askopenfilename
 from tkinter import ttk
 from PIL import Image, ImageTk
-from hive.utils import callweb, listadd, listsub, center, VerticalScrolledText
+from hive.utils import callweb, listadd, listsub, center, VerticalScrolledFrame, find
 from hive.styles import initStyle, used_colors
 
-#Debug
-print('Okay!')
 # script dir will be used as initial for load/save
 script_dir=os.path.dirname(os.path.realpath(__file__))
 init_dir =os.path.join(script_dir,'hive')
 save_dir = os.path.join(init_dir,'save')
+
+class Member():
+    def __init__(self, number=0, name='', coords=[0,0],power=0,status='', 
+                 city_id=None, widget = None, coord_widget = None, canvas = None):
+        self.number=number
+        self.name = name
+        self.coords = coords
+        self.power = power
+        self.status = status
+        self.city_id = city_id
+        self.widget = widget
+        self.coord_widget = coord_widget
+        self.canvas = canvas
+
+    def setColor(self):
+        if "current line;" in self.status:
+            self.widget.config(style='Current.TEntry')
+        elif "assigned;" in self.status:
+            self.widget.config(style='Assign.TEntry')
+        else:
+            self.widget.config(style='TEntry')
+
+    def changeState(self, state=""):
+        change = False
+        if "!current" in state:
+            self.status =self.status.replace("current line;","")
+            change = True
+            if self.city_id is not None:
+                try:
+                    self.canvas.itemconfig(self.city_id, fill=used_colors['city'])
+                    block = self.canvas.getBuildingFromId(self.city_id)
+                    if block is not None:
+                        text_id = block.id['text']
+                        #set textcolor according to block setting
+                        self.canvas.itemconfig(text_id,fill=used_colors["assign"])
+                except AttributeError:
+                    pass
+        if "!assigned" in state:
+            self.status =self.status.replace("assigned;","")
+            change = True
+        if "new current" in state:    
+            self.status += "current line;"
+            change = True
+            #highlight assigned city
+            if "assigned;" in self.status:
+                try:
+                    self.canvas.itemconfig(self.city_id, fill=used_colors['current'])
+                    block = self.canvas.getBuildingFromId(self.city_id)
+                    if block is not None:
+                        text_id = block.id['text']
+                        #set textcolor according to block setting
+                        self.canvas.itemconfig(text_id,fill="black")
+                except AttributeError:
+                    pass
+        if "new assigned" in state:    
+            self.status += "assigned;"
+            change = True
+        self.setColor()
+        return change    
 
 class Block():
     multiplier = 5
@@ -127,7 +184,8 @@ class MembersList(tk.Toplevel):
         super().__init__()
         self.style = self.master.style
         self.lines = lines
-        #buld member list and show in seperate Window
+        self.members=[]
+        #build member list and show in seperate Window
         self.title("Alliance Members List")
         self.geometry(geometry)
         #add border
@@ -139,31 +197,45 @@ class MembersList(tk.Toplevel):
         close_button=ttk.Button(upper_frame, text="Close", style='TButton', command=self.remove)
         close_button.pack()
 
-        self.members_frame= VerticalScrolledText(self)
-        self.members_frame.pack(fill='y', expand=True)
-        self.members_list = self.members_frame.textbox
-        #self.members_list.config(bg=self.style.lookup('Button.label','background'),
-        #                         fg=self.style.lookup('Button.label','foreground'))
-        self.members_list.pack(fill='y', expand=True)
+        # frame with actual list
+        # the data is in the frame inside the scroll frame
+        self.scroll_frame = VerticalScrolledFrame(self)
+        self.scroll_frame.pack(fill='y', expand=True)
+        self.new_frame = self.scroll_frame.interior
 
-        self.members_list.tag_configure("current_line", background=used_colors["current"])
-        self.members_list.tag_configure("assigned", background=used_colors["assign"])
-        self.members_list.tag_raise("current_line", "assigned")
-        self.members_list.tag_raise("sel", "current_line")
-        self.members_list.insert('1.0','\n')
-        #Fill list
-        for n,line in enumerate(self.lines):
-            self.members_list.insert('2.0 + ' + str(n)  +' lines',str(n+1)+'. ')
-            self.members_list.insert('2.end + ' + str(n)  +' lines',line.lstrip())
-        self.members_list.tag_add("current_line", "2.0", "2.end")
-        #select name by mouse klick
-        self.bind('<Button-1>', self.selectName)
+        #add members, to be filled in addMember
+        for line in lines:
+            self.members.append(Member(name=line.strip()))
+        self.setup()
+
+    def setup(self):
+        self.ml = []
+        self.names = []
+        #for i, member in enumerate(self.members):
+        for member in self.members:
+            self.addMember(member)
+ 
+    def selectName(self,event, var):
+        #select the klicked name
+        widget=event.widget
+        member_name = var.get()
+        #remove old current line
+        old_cl = find(lambda my: "current line;" in my.status, self.members)
+        if old_cl:
+            old_cl.changeState("!current")
+            old_cl.setColor()
+
+        member = find(lambda my: my.name == member_name, self.members)
+        #add new current line
+        if not member:
+            member=Member(name=member_name)
+        member.changeState("new current")
 
     def remove(self):
         #check if there are any assignments
         #if yes, warn window
         #if not, destroy
-        if self.members_list.tag_ranges("assigned"):
+        if find(lambda my: "assigned;" in my.status, self.members):
             response = self.master.warn_window('Closing Members List will remove current assignments!\nDo you want to proceed?', buttons = 2, b_text=['Yes','No'])
         else:
             self.destroy() 
@@ -178,7 +250,6 @@ class MembersList(tk.Toplevel):
 
     def removeCityAssignment(self, city, member_name):
         #remove the city from the assignment list and delete the number
-        ml=self.members_list
         canvas = self.master.paint_canvas
         #find city on canvas
         text_field = set(canvas.find_overlapping(*canvas.coords(city))).intersection(set(canvas.find_withtag('member')))
@@ -186,76 +257,53 @@ class MembersList(tk.Toplevel):
         canvas.delete(*text_field)
         #remove tag
         canvas.dtag(city, member_name)
-        line=ml.search(member_name,'1.0').split('.')[0]
-        ml.tag_remove("assigned",line+'.0',line+'.end')
+
+        member = find(lambda my: my.name == member_name,self.members)
+        if member:
+            member.changeState('!assigned')
+            member.city_id = None
+            member.coords = [0, 0]
+            member.coord_widget.config(text=member.coords)
+
         #remove from list of assigned cities
         #TODO: this doesn_t work with iterations
         #canvas.cities.pop(member_name)
 
-    def selectName(self,event):
-        #select the klicked name
-        #get current line
-        index_line = self.members_list.index(tk.CURRENT).split('.')[0]
-        # set current line and remove old seting
-        self.members_list.tag_remove("current_line",'1.0',"end")
-        #is there a tab that seperates name and coords?
-        #TODO: would be much easier with a table
-        is_tab = self.members_list.search('\t',index_line+'.0')
-        if isinstance(is_tab,str) and is_tab.split('.')[0] == index_line:
-            name_end = is_tab
-        else:
-            name_end = index_line+'.end'
-        self.members_list.tag_add("current_line",index_line+'.0',name_end)
-    
     def merge(self,new_members):
         #merge new list of names with existing one
-        old_list = self.members_list.get('1.0','end')
-        self.members_list.tag_remove("current_line",'1.0',"end")
+
         for new_member in new_members:
             #remove whitespaces and CR at start and end of name
             new_member=new_member.strip()
             #Is member in list already?
-            if old_list.find(new_member) == -1:
-                self.addMember(new_member)
+            member = find(lambda my: my.name == new_member, self.members)
+            if not member:
+                self.members.append(Member(name=new_member))
+                self.addMember(self.members[-1])
 
-    def addMember(self,member_name):
+    def addMember(self, member):
         #add new member to MembersList
-        ml=self.members_list
+        self.names.append(tk.StringVar(master =self.new_frame, value=member.name))
+        new_idx = len(self.names)
+        member.number= new_idx
+        ml_number = ttk.Label(self.new_frame,style='TLabel',text=str(new_idx))
+        ml_number.grid(row=new_idx,column=0, sticky='news')
+        ml_entry = ttk.Entry(self.new_frame,style='TEntry',textvar=self.names[new_idx-1], width=15)
+        ml_entry.grid(row=new_idx,column=1, sticky='news')
+        member.widget = ml_entry
+        ml_coords = ttk.Label(self.new_frame,style='TLabel',text=member.coords)
+        ml_coords.grid(row=new_idx,column=2, sticky='news')
+        member.coord_widget = ml_coords
         
-        line_num=ml.index('end').split('.')[0]
-        #last line is empty line? Find last line with text
-        while ml.compare(line_num+'.end', '==', line_num+'.0'):
-            line_num=str(int(line_num)-1)
-        new_idx=ml.get(line_num+'.0',line_num+'.end')
-        try:
-            new_idx=new_idx.split('.')[0]
-            #is it a number?
-            new_idx = self.getNewNumber()
-        except ValueError:
-            new_idx=100+int(line_num)
-        #Add new member and give them focus
-        new_line = int(line_num)+1
-        ml.tag_remove("current_line",'1.0','end')
-        # put CR at end of last line
-        ml.insert(line_num+'.end','\n')
-        ml.insert(str(new_line)+'.0',str(new_idx)+'. '+member_name,"current_line") 
+        ml_entry.bind('<ButtonRelease-1>', func=lambda event,var = self.names[new_idx-1]: self.selectName(event,var))
+        self.ml.append((ml_number,ml_entry, ml_coords ))
 
-    def getNewNumber(self):
-        #get all numbers currently used in the MembersList
-        usedNums=set()
-        #max_lines = int(self.members_list.index("end").split('.')[0])-1
-        lines = self.members_list.get('1.0','end').split('\n')
-        for line in lines:
-            #if there is a number at the beginning of the line, take it, otherwise ignore
-            try:
-                usedNums.add(int(line.split('.')[0]))
-            except ValueError:
-                pass
-        if usedNums:
-            #return highest used number+1
-            return max(usedNums)+1
-        else:
-            return 1
+        #change state of old 'current' member
+        cur_member = find(lambda my: "current line;" in my.status, self.members)
+        if cur_member:
+            cur_member.changeState('!current')
+        #and make the new member the current one
+        member.changeState("new current")
 
 class IsoCanvas(tk.Canvas):
     def __init__(self, master, width=0, height=0, bg='white', print_coords = True):
@@ -576,31 +624,13 @@ class PaintCanvas(IsoCanvas):
     
     def assignMember(self,ML,city):
         #assign selected member to building
-        #ML: MembersList
-        ml = ML.members_list
-        cl_index = ml.tag_ranges("current_line")
-        #check if there actually is a current line
-        #otherwise ignore it
-        if not cl_index:
+        member = find(lambda my: "current line;" in my.status, ML.members)
+        #if there is a current line
+        if not member:
             return
-        #if there is more than one "current_line", take first
-        #  This case should never happen
-        if len(cl_index) > 2:
-            cl_index=cl_index[0:2]
-
-        current_line = ml.get(*cl_index).split('.')
-        try:
-            member_num = int(current_line[0])
-        except ValueError:
-            #no number in line, so add it
-            member_num = ML.getNewNumber()
-            ml.insert(cl_index[0],str(member_num)+'. ',"current_line")
-            #update tag
-            cl_index = ml.tag_ranges("current_line")
-            current_line = ml.get(*cl_index).split('.')
-            #self.master.warn_window('Member has no number!\nPlease add new number: <XX. MemberName>')
-            #return
-        member_name = current_line[1].rstrip()
+        member_num = member.number
+        member_name = member.name
+        
         self.addtag_withtag('assigned',city)
         #remove old assignement as one member can have only one city
         if member_name in self.cities.keys():
@@ -610,36 +640,26 @@ class PaintCanvas(IsoCanvas):
         #and remove previous owner of city (if any)
         if city in self.cities.values():
             old_owner = [k for k,v in self.cities.items() if v == city][0]
-            # remove from owner list
-            self.cities.pop(old_owner)
-            #remove owner tag from city
-            self.dtag(city, old_owner)
-            #and remove text field w number from city
-            text_field = set(self.find_overlapping(*self.coords(city))).intersection(set(self.find_withtag('member')))
-            #text_field is a set, so adress as pointer
-            self.delete(*text_field)
-            #also: owner should no longer be 'assigned'
-            line=ml.search(old_owner,'1.0').split('.')[0]
-            ml.tag_remove("assigned",line+'.0',line+'.end')
+            #remove old assignment
+            ML.removeCityAssignment(city,old_owner)
 
         self.cities.update({member_name : city})
         #also tag the city in question
         self.addtag_withtag(member_name, city)
         # and the other way around
         self.assigments = { id : city for city, id in self.cities.items()}
-        #also mark it in member list:
-        ml.tag_add("assigned",*cl_index)
-        #and remove the current selection
-        ml.tag_remove("current_line",*cl_index)
+        member.city_id = city
+        member.canvas = self
 
         # provide coorinates if trap coordinates are activated
         if self.master.trap_c is not None:
             cc = self.coords(city)
             cc = [cc[0],cc[-1]]
             cc_grid = [int(dummy) for dummy in self.convCoord2Grid(cc, trap_coords=self.master.trap_c)]
-            #TODO: Make this a table for easier access
-            ml.delete(cl_index[1],str(cl_index[1]).split('.')[0]+'.end')
-            ml.insert(cl_index[1],'\t'+str(cc_grid))
+            #change to new class
+            member.coords = cc_grid
+            member.coord_widget.config(text=member.coords)
+
         #bind to the city (not the text!)
         self.tag_bind(member_name,'<Enter>',func=lambda event: showAssignment(event=event,canvas = self))
         self.tag_bind(member_name,'<Leave>',func=lambda event: showAssignment(event=event,canvas = self))
@@ -654,6 +674,8 @@ class PaintCanvas(IsoCanvas):
         #set textcolor according to block setting
         self.itemconfig(text_id,fill=used_colors["assign"])
         self.tag_lower('building','member')
+        #also mark it in member list and remove the current selection;:
+        member.changeState("new assigned,!current")
 
     def findAssignee(self,id):
         #find the name of the member assigned to the id of the canvas object
@@ -791,7 +813,6 @@ class MainWindow(tk.Tk):
     #function for Trap Coordinate Entry field
     def validateCoord(self, new_text):
             #TODO: Show limit of state on canvas
-            #TODO: What if Trap is not in the origin?
             max_coord = 1199
             min_coord = 0
             regex = r'X:\s*(\d*),\s*Y:\s*(\d*)'
@@ -1148,13 +1169,15 @@ class MainWindow(tk.Tk):
                         self.updateMembersList(ml_data)
                     else:
                         self.MembersList = MembersList(ml_data,geometry=("{}x{}+{}+{}".format(250, self.winfo_height(),self.winfo_x()+self.winfo_width(),self.winfo_y())))
-                        #remove active player tag
-                        self.MembersList.members_list.tag_remove("current_line",'1.0','end')                       
+                        for member in self.MembersList.members:
+                            member.changeState('!current')           
                 # there is no list
                 except AttributeError:
                     self.MembersList = MembersList(ml_data,geometry=("{}x{}+{}+{}".format(250, self.winfo_height(),self.winfo_x()+self.winfo_width(),self.winfo_y())))
                     #remove active player tag
-                    self.MembersList.members_list.tag_remove("current_line",'1.0','end')
+                    for member in self.MembersList.members:
+                        member.changeState("!current")
+
             #then add the buildings
             for line in lines:
                 self.buildHive(line)
@@ -1203,20 +1226,22 @@ class MainWindow(tk.Tk):
                 #for cities, add they have assigned members
                 if block == 'City':
                     for member in assignments:
-                        ml = self.MembersList.members_list
+                        ML = self.MembersList
+
                         member_coords = member[0:2]
-                        member_name = member[2:][0]
+                        member_name = member[2:][0].strip()
                         
                         #assigned city!
                         if member_coords == ct:
                             city=build_new.id['building']
-                            line_num=ml.search(member_name,'1.0').split('.')[0]
+
                             #check if member exists in list
-                            if line_num:
-                                ml.tag_add("current_line",line_num+'.0',line_num+'.end')
+                            member = find(lambda f: f.name == member_name, ML.members)
+                            if member:
+                                member.changeState("new current")
                             #if member is not found, add them to the list
                             else:
-                                self.MembersList.addMember(member_name)
+                                self.MembersList.addMember(Member(name=member_name))
                             self.paint_canvas.assignMember(self.MembersList,city=city)
 
     def loadMembersList(self):
@@ -1244,6 +1269,8 @@ class MainWindow(tk.Tk):
             #and generate new one
             self.MembersList = MembersList(ml_data,geometry=("{}x{}+{}+{}".format(250, self.winfo_height(),self.winfo_x()+self.winfo_width(),self.winfo_y())))
             #remove active player tag
+            for member in self.members:
+                member.changeState('!current')
             self.MembersList.members_list.tag_remove("current_line",'1.0','end')
         elif response == 'merge':
             #merge both lists

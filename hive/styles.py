@@ -102,4 +102,6 @@ def initStyle(win, theme='black'):
                         ('!focus', 'red')],
         relief=[('pressed', 'sunken'),
                 ('!pressed', 'raised')])
+    style.configure('Current.TEntry',fieldbackground=used_colors['current'])
+    style.configure('Assign.TEntry',fieldbackground=used_colors['assign'])
     return style

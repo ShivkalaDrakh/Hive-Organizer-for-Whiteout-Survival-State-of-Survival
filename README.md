@@ -18,6 +18,8 @@ The City is then assigned to the Member, the number on the City corresponding to
 A Mouse-over over the City shows the name of the alliance member. Overwritting and re-positioning is just as easy.
 (Video will be added)
 
+Also by klicking on the Member name on the list, the city in the Hive is highlighted, making it much easier to find a member in the Hive!
+
 ### Different Zoom for clearer editing
 Whether you need your whole Hive to be visible or prefer bigger blocks for member assignment or building, you can use different zoom settings
 ![picture of Zoom Mode](Screenshot%20zoom.png)
@@ -36,6 +38,9 @@ Therefore, the Hive can be displayed in Ismetric View to have the same orientati
 
 And also in the isometric view you can choose different Zoom settings
 ![Isometric View of the Hive in Zoom Mode, including Assignments](Screenshot%20Isometric_zoom.png)
+
+### Trap and City Coordinates (V0.2)
+By entering the Trap Coordinates as given by the game, all grid coordinates are updated to those coordinates and all assignened member cities show the coordinates next to their name.
 
 ## Getting started
 You can either download 

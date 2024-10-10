@@ -32,7 +32,7 @@ init_dir =os.path.join(script_dir,'hive')
 save_dir = os.path.join(init_dir,'save')
 
 class Member():
-    def __init__(self, number=0, name='', coords=[0,0],power=0,status='', 
+    def __init__(self, number=0, name='', coords=' --- ',power=0,status='', 
                  city_id=None, widget = None, coord_widget = None, canvas = None):
         self.number=number
         self.name = name
@@ -57,38 +57,42 @@ class Member():
         if "!current" in state:
             self.status =self.status.replace("current line;","")
             change = True
-            if self.city_id is not None:
-                try:
-                    self.canvas.itemconfig(self.city_id, fill=used_colors['city'])
-                    block = self.canvas.getBuildingFromId(self.city_id)
-                    if block is not None:
-                        text_id = block.id['text']
-                        #set textcolor according to block setting
-                        self.canvas.itemconfig(text_id,fill=used_colors["assign"])
-                except AttributeError:
-                    pass
+            self.setCityHighlight(highlight=False)
         if "!assigned" in state:
             self.status =self.status.replace("assigned;","")
             change = True
+            self.setCityHighlight(highlight=False)
         if "new current" in state:    
             self.status += "current line;"
             change = True
             #highlight assigned city
             if "assigned;" in self.status:
-                try:
-                    self.canvas.itemconfig(self.city_id, fill=used_colors['current'])
-                    block = self.canvas.getBuildingFromId(self.city_id)
-                    if block is not None:
-                        text_id = block.id['text']
-                        #set textcolor according to block setting
-                        self.canvas.itemconfig(text_id,fill="black")
-                except AttributeError:
-                    pass
+                self.setCityHighlight(highlight=True)
         if "new assigned" in state:    
             self.status += "assigned;"
             change = True
         self.setColor()
         return change    
+
+    def setCityHighlight(self, highlight=True):
+        #set or reset the city highlight
+        if highlight:
+            bg = used_colors['current']
+            fg = 'black'
+        else:
+            bg = used_colors['city']
+            fg = used_colors['assign']
+        if self.city_id is not None:
+            try:
+                self.canvas.itemconfig(self.city_id, fill=bg)
+                block = self.canvas.getBuildingFromId(self.city_id)
+                if block is not None:
+                    text_id = block.id['text']
+                    #set textcolor according to block setting
+                    self.canvas.itemconfig(text_id,fill=fg)
+            except AttributeError:
+                pass
+
 
 class Block():
     multiplier = 5
@@ -263,7 +267,7 @@ class MembersList(tk.Toplevel):
             member.changeState('!assigned')
             member.city_id = None
             member.coords = [0, 0]
-            member.coord_widget.config(text=member.coords)
+            member.coord_widget.config(text=' --- ')
 
         #remove from list of assigned cities
         #TODO: this doesn_t work with iterations
@@ -642,6 +646,7 @@ class PaintCanvas(IsoCanvas):
             old_owner = [k for k,v in self.cities.items() if v == city][0]
             #remove old assignment
             ML.removeCityAssignment(city,old_owner)
+            self.cities.pop(old_owner)
 
         self.cities.update({member_name : city})
         #also tag the city in question
@@ -658,7 +663,7 @@ class PaintCanvas(IsoCanvas):
             cc_grid = [int(dummy) for dummy in self.convCoord2Grid(cc, trap_coords=self.master.trap_c)]
             #change to new class
             member.coords = cc_grid
-            member.coord_widget.config(text=member.coords)
+            member.coord_widget.config(text=str(member.coords))
 
         #bind to the city (not the text!)
         self.tag_bind(member_name,'<Enter>',func=lambda event: showAssignment(event=event,canvas = self))

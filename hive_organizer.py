@@ -26,6 +26,8 @@ from PIL import Image, ImageTk
 from hive.utils import callweb, listadd, listsub, center, VerticalScrolledFrame, find
 from hive.styles import initStyle, used_colors
 
+Version = "V0.2.1"
+
 # script dir will be used as initial for load/save
 script_dir=os.path.dirname(os.path.realpath(__file__))
 init_dir =os.path.join(script_dir,'hive')
@@ -198,14 +200,22 @@ class MembersList(tk.Toplevel):
         upper_frame = ttk.Frame(self)
         #upper_frame.pack()
         upper_frame.pack(fill='x')
+        update_c_button=ttk.Button(upper_frame, text="Update", style='TButton', 
+                                   command=self.updateCoordinates)
+        update_c_button.grid(row=0,column=0, padx=(7, 7), pady=(7, 7), sticky='w')
         close_button=ttk.Button(upper_frame, text="Close", style='TButton', command=self.remove)
-        close_button.pack()
+        #close_button.pack()
+        close_button.grid(row=0,column=1, padx=(7, 7), pady=(7, 7), sticky='e')
+
+        upper_frame.columnconfigure(0, weight=0)
+        upper_frame.columnconfigure(1, weight=1)
 
         # frame with actual list
         # the data is in the frame inside the scroll frame
         self.scroll_frame = VerticalScrolledFrame(self)
-        self.scroll_frame.pack(fill='y', expand=True)
+        self.scroll_frame.pack(fill='both', expand=True)
         self.new_frame = self.scroll_frame.interior
+        self.new_frame.columnconfigure(1, weight=1)
 
         #add members, to be filled in addMember
         for line in lines:
@@ -221,7 +231,6 @@ class MembersList(tk.Toplevel):
  
     def selectName(self,event, var):
         #select the klicked name
-        widget=event.widget
         member_name = var.get()
         #remove old current line
         old_cl = find(lambda my: "current line;" in my.status, self.members)
@@ -252,6 +261,12 @@ class MembersList(tk.Toplevel):
             cities.clear()
             self.destroy()  
 
+    def updateCoordinates(self):
+        canvas = self.master.paint_canvas
+        for member in self.members:
+            if "assigned;" in member.status:
+                canvas.showMemberCoords(member)
+
     def removeCityAssignment(self, city, member_name):
         #remove the city from the assignment list and delete the number
         canvas = self.master.paint_canvas
@@ -264,7 +279,7 @@ class MembersList(tk.Toplevel):
 
         member = find(lambda my: my.name == member_name,self.members)
         if member:
-            member.changeState('!assigned')
+            member.changeState("!assigned")
             member.city_id = None
             member.coords = [0, 0]
             member.coord_widget.config(text=' --- ')
@@ -292,11 +307,11 @@ class MembersList(tk.Toplevel):
         member.number= new_idx
         ml_number = ttk.Label(self.new_frame,style='TLabel',text=str(new_idx))
         ml_number.grid(row=new_idx,column=0, sticky='news')
-        ml_entry = ttk.Entry(self.new_frame,style='TEntry',textvar=self.names[new_idx-1], width=15)
+        ml_entry = ttk.Entry(self.new_frame,style='TEntry',textvar=self.names[new_idx-1], width=20)
         ml_entry.grid(row=new_idx,column=1, sticky='news')
         member.widget = ml_entry
         ml_coords = ttk.Label(self.new_frame,style='TLabel',text=member.coords)
-        ml_coords.grid(row=new_idx,column=2, sticky='news')
+        ml_coords.grid(row=new_idx,column=2, padx= 7, sticky='news')
         member.coord_widget = ml_coords
         
         ml_entry.bind('<ButtonRelease-1>', func=lambda event,var = self.names[new_idx-1]: self.selectName(event,var))
@@ -556,7 +571,10 @@ class PaintCanvas(IsoCanvas):
         self.makeGrid()
         #remove assignments from member list (if any)
         try:
-            self.master.MembersList.members_list.tag_remove('assigned','1.0','end')
+            #remove active player tag
+            for member in self.MembersList.members:
+                member.changeState("!assigned")
+            #self.master.MembersList.members_list.tag_remove('assigned','1.0','end')
         except AttributeError:
             pass
         #put HQ and Trap
@@ -658,12 +676,7 @@ class PaintCanvas(IsoCanvas):
 
         # provide coorinates if trap coordinates are activated
         if self.master.trap_c is not None:
-            cc = self.coords(city)
-            cc = [cc[0],cc[-1]]
-            cc_grid = [int(dummy) for dummy in self.convCoord2Grid(cc, trap_coords=self.master.trap_c)]
-            #change to new class
-            member.coords = cc_grid
-            member.coord_widget.config(text=str(member.coords))
+            self.showMemberCoords(member)
 
         #bind to the city (not the text!)
         self.tag_bind(member_name,'<Enter>',func=lambda event: showAssignment(event=event,canvas = self))
@@ -682,6 +695,19 @@ class PaintCanvas(IsoCanvas):
         #also mark it in member list and remove the current selection;:
         member.changeState("new assigned,!current")
 
+    def showMemberCoords(self, member):
+        #Calculate the city coordinate in the trap grid and display it
+        #check if trap coordinates are active
+        if self.master.trap_c is not None:
+            cc = self.coords(member.city_id)
+            cc = [cc[0],cc[-1]]
+            cc_grid = [int(dummy) for dummy in self.convCoord2Grid(cc, trap_coords=self.master.trap_c)]
+            #change to new class
+            member.coords = cc_grid
+            member.coord_widget.config(text=str(member.coords))
+        else:
+            member.coord_widget.config(text=' --- ')
+
     def findAssignee(self,id):
         #find the name of the member assigned to the id of the canvas object
         ret_val = list(set(self.gettags(id)).intersection(set(self.cities.keys())))
@@ -695,7 +721,7 @@ class PaintCanvas(IsoCanvas):
 class MainWindow(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title('Hive Organizer \t'+chr(169)+' 2024 by Shivkala')
+        self.title('Hive Organizer '+Version+'\t'+chr(169)+' 2024 by Shivkala')
 
         #define buttons and button actions
         # size depending on screen size
@@ -835,7 +861,10 @@ class MainWindow(tk.Tk):
                         return False
                     # In the game, trap coordinates are given for lower left corner, not center
                     # therefore half trap size has to be added in both x and y
-                    self.trap_c = listadd(self.trap_c,[Trap().size/2,Trap().size/2])
+                    if self.trap_c == [0, 0]:
+                        self.resetTrapCoord()
+                    else:
+                        self.trap_c = listadd(self.trap_c,[Trap().size/2,Trap().size/2])
                     return True
                 except ValueError:
                     return True
@@ -847,8 +876,10 @@ class MainWindow(tk.Tk):
         self.buildings = set(['HQ','City','Flag','Trap','Rock'])
 
     def resetTrapCoord(self):
+        #TODO: make inactive even if trap is there
         self.trap_c = None 
         self.trap_coord.set('X: 0, Y: 0')
+        self.trap_entry.state(['disabled'])
 
     def donate(self, width=300, height=350):
         top=tk.Toplevel(self)
@@ -1113,10 +1144,9 @@ class MainWindow(tk.Tk):
             building_info.append(self.buildingInfoEncoder(building))
         try:
             self.MembersList.winfo_exists()
-            member_list = self.MembersList.members_list.get('1.0','end')
+            member_list = self.MembersList.lines
             #remove leading numbers and coordinates
-            regex=r'\d+\. ([^\t\n]*).*'
-            member_list = re.findall(regex,member_list)
+
             #strip whitespaces
             member_list = [member.strip() for member in member_list]
         except AttributeError:
@@ -1183,7 +1213,8 @@ class MainWindow(tk.Tk):
                     for member in self.MembersList.members:
                         member.changeState("!current")
 
-            #then add the buildings
+            # reset Trap Coordinates, then add the buildings
+            self.resetTrapCoord()
             for line in lines:
                 self.buildHive(line)
             #put origin marker
@@ -1274,9 +1305,9 @@ class MainWindow(tk.Tk):
             #and generate new one
             self.MembersList = MembersList(ml_data,geometry=("{}x{}+{}+{}".format(250, self.winfo_height(),self.winfo_x()+self.winfo_width(),self.winfo_y())))
             #remove active player tag
-            for member in self.members:
+            for member in self.MembersList.members:
                 member.changeState('!current')
-            self.MembersList.members_list.tag_remove("current_line",'1.0','end')
+
         elif response == 'merge':
             #merge both lists
             self.MembersList.merge(ml_data)

@@ -772,7 +772,7 @@ class MainWindow(tk.Tk):
         self.default_button = ttk.Button(bt_frame, text='Default', style='TButton', command=self.default)
         self.default_button.grid(row = 0, column=fc+9, sticky='nes',padx=fpadx, pady=fpady)
 
-        self.members_button = ttk.Button(bt_frame, text='Member List', command=self.loadMembersList)
+        self.members_button = ttk.Button(bt_frame, text='Member List', command=self.fileMembersList)
         self.members_button.grid(row = 0, column=fc+10, sticky='news',padx=fpadx, pady=fpady)
 
         self.assign_button = ttk.Button(bt_frame, text='Assign',style='Assign.TButton', command=self.assignMode)
@@ -1286,6 +1286,20 @@ class MainWindow(tk.Tk):
                                 self.MembersList.addMember(Member(name=member_name))
                             self.paint_canvas.assignMember(self.MembersList,city=city)
 
+    def fileMembersList(self):
+        #if MembersList already exists, save or load List
+        try:
+            ml_ok = self.MembersList.winfo_exists()
+            response = self.warn_window('Member List already active!\nSave current List or load new List?', 
+                                    buttons = 2, b_text=['Save','Load'])
+        except:
+            self.loadMembersList()
+            return     
+        if ml_ok and response == 'save':
+            self.saveMembersList()
+        else:
+            self.loadMembersList()
+
     def loadMembersList(self):
         load_file = askopenfilename(title='Load Member List:',initialdir=save_dir, defaultextension='.txt', filetypes=[('Member List text file','*.txt'), ('All files','*.*')]) 
         if load_file:
@@ -1300,6 +1314,24 @@ class MainWindow(tk.Tk):
         except AttributeError:
             pass
         self.MembersList = MembersList(lines,geometry=("{}x{}+{}+{}".format(250, self.winfo_height(),self.winfo_x()+self.winfo_width(),self.winfo_y())))
+
+    def saveMembersList(self):
+        #save MemberslList to Textfile
+        try:
+            ml_ok = self.MembersList.winfo_exists()
+        except AttributeError:
+            return
+        if ml_ok:  
+            # get list of member names
+            member_list = self.MembersList.lines
+            #strip whitespaces
+            member_list = [member.strip() for member in member_list]          
+            save_file = asksaveasfilename(title='Save Member List:',initialdir=save_dir, defaultextension='.txt', filetypes=[('Member List text file','*.txt'), ('All files','*.*')]) 
+            if save_file:
+                with open(save_file,'wb') as file:
+                    if member_list is not None:
+                        line = '\n'.join(member_list)
+                        file.write(line.encode('utf8', errors='xmlcharrefreplace'))
 
     def updateMembersList(self,ml_data):
         #what to do if new List is loaded when list already exists

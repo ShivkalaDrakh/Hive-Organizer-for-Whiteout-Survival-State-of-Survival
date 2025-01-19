@@ -22,7 +22,7 @@ import math
 import os
 from tkinter.filedialog import asksaveasfilename, askopenfilename
 from tkinter import ttk
-from PIL import Image, ImageTk
+from PIL import Image, ImageTk, ImageGrab
 from hive.utils import callweb, listadd, listsub, center, VerticalScrolledFrame, find
 from hive.styles import initStyle, used_colors
 
@@ -32,6 +32,8 @@ Version = "V0.2.1"
 script_dir=os.path.dirname(os.path.realpath(__file__))
 init_dir =os.path.join(script_dir,'hive')
 save_dir = os.path.join(init_dir,'save')
+
+#TODO: Implement second Trap
 
 class Member():
     def __init__(self, number=0, name='', coords=' --- ',power=0,status='', 
@@ -185,6 +187,7 @@ class Rock(Block):
           super().__init__(size, area,coords,color,tag)  
 
 class MembersList(tk.Toplevel):
+    #TODO: Allow for Chinese/Japanese/Korean Characters
     # Defines the window with the list of member names
     def __init__(self,lines,geometry='100x100+100+100'):
         super().__init__()
@@ -338,7 +341,7 @@ class IsoCanvas(tk.Canvas):
             ret_val = ret_val[0] 
         return ret_val
     
-#TODO: make PaintCanvas sub-class of IsoCAnvas and transfer the relevent methods
+#TODO: make PaintCanvas scrollable to allow for larger hives
 class PaintCanvas(IsoCanvas):
     def __init__(self, master, width=0, height=0, bg='white', print_coords = True):
         super().__init__(master=master,width=width, height=height, bg=bg)
@@ -1325,6 +1328,7 @@ class MainWindow(tk.Tk):
         top.geometry("{}x{}+{}+{}".format(self.winfo_width(), self.winfo_height()+40,self.winfo_x()+20,self.winfo_y()+20))
         tk.Button(top, text="Close", command=top.destroy).pack()
         top_canvas = IsoCanvas(top, width=self.winfo_width(), height=self.winfo_height(),bg='white')
+        tk.Button(top, text="Make PNG", command=lambda: make_png(top_canvas,top)).pack()
         top_canvas.pack()
         top_canvas.showMember = None
         top_canvas.cities = canvas.cities
@@ -1714,6 +1718,18 @@ def pushBuilding(old_bb,new_bb):
                 delta_coord[delta_coord.index(max(delta_coord,key=abs))] = 0
 
             return delta_coord
+
+def make_png(widget, toplevel):
+    save_file = asksaveasfilename(title='Save Hive as PNG:', defaultextension='.png', initialdir=save_dir)
+    #put the window on top so that the screen grab is not obstructed by other windows
+    toplevel.attributes('-topmost',True)
+    x=toplevel.winfo_rootx()+widget.winfo_x()
+    y=toplevel.winfo_rooty()+widget.winfo_y()
+    x1=x+widget.winfo_width()
+    y1=y+widget.winfo_height()
+    ImageGrab.grab((x,y,x1,y1)).save(save_file)
+    #release the window
+    toplevel.attributes('-topmost',False)
 
 MW = MainWindow()
 MW.mainloop()

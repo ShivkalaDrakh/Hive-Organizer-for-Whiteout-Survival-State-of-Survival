@@ -33,8 +33,6 @@ script_dir=os.path.dirname(os.path.realpath(__file__))
 init_dir =os.path.join(script_dir,'hive')
 save_dir = os.path.join(init_dir,'save')
 
-#TODO: Implement second Trap
-
 class Member():
     def __init__(self, number=0, name='', coords=' --- ',power=0,status='', 
                  city_id=None, widget = None, coord_widget = None, canvas = None):
@@ -187,7 +185,6 @@ class Rock(Block):
           super().__init__(size, area,coords,color,tag)  
 
 class MembersList(tk.Toplevel):
-    #TODO: Allow for Chinese/Japanese/Korean Characters
     # Defines the window with the list of member names
     def __init__(self,lines,geometry='100x100+100+100'):
         super().__init__()
@@ -724,7 +721,7 @@ class PaintCanvas(IsoCanvas):
 class MainWindow(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title('Hive Organizer '+Version+'\t'+chr(169)+' 2024 by Shivkala')
+        self.title('Hive Organizer '+Version+'\t'+chr(169)+' 2024/25 by Shivkala')
 
         #define buttons and button actions
         # size depending on screen size
@@ -1131,7 +1128,7 @@ class MainWindow(tk.Tk):
                 obj_info = []
 
         obj_info_str = tag+': '+str(obj_info)+'\n'
-        return obj_info_str.encode('ascii', errors='xmlcharrefreplace')
+        return obj_info_str.encode('utf8', errors='xmlcharrefreplace')
 
     def saveLayout(self):
         #save buildings and assignments to file
@@ -1164,7 +1161,7 @@ class MainWindow(tk.Tk):
                 save_tc = listsub(self.trap_c,[Trap().size/2,Trap().size/2])
                 save_tc =[int(c) for c in save_tc]
                 line = 'TrapCoords: '+str(save_tc)+'\n'
-                file.write(line.encode('ascii', errors='xmlcharrefreplace'))
+                file.write(line.encode('utf8', errors='xmlcharrefreplace'))
             #Then Buildings
             for enc_line in building_info:
                 file.write(enc_line)
@@ -1172,7 +1169,7 @@ class MainWindow(tk.Tk):
             #if member list exists, save it
             if member_list is not None:
                 line = 'MemberList: '+'\n'.join(member_list)
-                file.write(line.encode('ascii', errors='xmlcharrefreplace'))
+                file.write(line.encode('utf8', errors='xmlcharrefreplace'))
         #set zoom_status back to original setting
         if zoom_status:
             self.paint_canvas.zoom()
@@ -1183,7 +1180,7 @@ class MainWindow(tk.Tk):
         ml_data = str()
         load_file = askopenfilename(title='Load Hive file:',initialdir=save_dir,defaultextension='.hb',filetypes=[('Hive Organizer file','*.hb'), ('All files','*.*')])   
         if load_file:
-            with open(load_file,'r') as file:
+            with open(load_file,'r',encoding='utf8') as file:
                 lines=file.readlines()
         # only if data was read
         if lines:
@@ -1248,13 +1245,19 @@ class MainWindow(tk.Tk):
             #build_now = eval(command)
             #find all coordinates of the block
             #there might be negative numbers!
-            regex_assign = r'\[(-?\d+\.\d+),\s*(-?\d+\.\d+)\].{,3}\&#8364;\&#8364;([^\&]+)\&#8364;\&#8364;'
+            #legacy mode:
+            regex_assign_old = r'\[(-?\d+\.\d+),\s*(-?\d+\.\d+)\].{,3}\&#8364;\&#8364;([^\&]+)\&#8364;\&#8364;'
+            regex_assign = r'\[(-?\d+\.\d+),\s*(-?\d+\.\d+)\].{,3}€€([^(€€)]+)€€'
             regex = r'\[(-?\d+\.\d+),\s*(-?\d+\.\d+)\]'
             coords_str = re.findall(regex,line)
             #result is list of tuples of strings, e.g. [('1.0', '2.5'), ('5.00', '7.25'), ('77.1', '88.8')]
             #for cities, check if they have assigned members
             if block == 'City':
                 assignments = re.findall(regex_assign,line)
+                #legacy mode
+                if len(assignments) < 1:
+                    assignments = re.findall(regex_assign_old,line)
+
             #result is list of tuples of strings, e.g. [('1.0', '2.5','Member1'), ('5.00', '7.25','Member2'), ('77.1', '88.8','Member3')]
             #convert into list of coordinates
             for ct in coords_str:
@@ -1286,7 +1289,7 @@ class MainWindow(tk.Tk):
     def loadMembersList(self):
         load_file = askopenfilename(title='Load Member List:',initialdir=save_dir, defaultextension='.txt', filetypes=[('Member List text file','*.txt'), ('All files','*.*')]) 
         if load_file:
-            with open(load_file,'r') as file:
+            with open(load_file,'r',encoding='utf8') as file:
                 lines=file.readlines()
         #is there already a members list?
         try:

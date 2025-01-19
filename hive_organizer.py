@@ -26,7 +26,7 @@ from PIL import Image, ImageTk, ImageGrab
 from hive.utils import callweb, listadd, listsub, center, VerticalScrolledFrame, find
 from hive.styles import initStyle, used_colors
 
-Version = "V0.2.1"
+Version = "V0.2.2"
 
 # script dir will be used as initial for load/save
 script_dir=os.path.dirname(os.path.realpath(__file__))
@@ -1325,10 +1325,18 @@ class MainWindow(tk.Tk):
         top = tk.Toplevel(self)
         top.details_expanded = False
         top.title("Isometric View")
+        top.style = self.style
+        top.config(bd=3, bg=used_colors['bg'])
+
+        upper_frame = ttk.Frame(top)
+        #upper_frame.pack()
+        upper_frame.pack(fill='x')
         top.geometry("{}x{}+{}+{}".format(self.winfo_width(), self.winfo_height()+40,self.winfo_x()+20,self.winfo_y()+20))
-        tk.Button(top, text="Close", command=top.destroy).pack()
         top_canvas = IsoCanvas(top, width=self.winfo_width(), height=self.winfo_height(),bg='white')
-        tk.Button(top, text="Make PNG", command=lambda: make_png(top_canvas,top)).pack()
+        tmpng = ttk.Button(upper_frame, text="Make PNG", style='TButton', command=lambda: make_png(top_canvas,top))
+        tmpng.grid(row=0,column=0, padx=(7, 7), pady=(7, 7), sticky='w')
+        tcb = ttk.Button(upper_frame, text="Close", style='TButton', command=top.destroy)
+        tcb.grid(row=0,column=1, padx=(7, 7), pady=(7, 7), sticky='e')
         top_canvas.pack()
         top_canvas.showMember = None
         top_canvas.cities = canvas.cities

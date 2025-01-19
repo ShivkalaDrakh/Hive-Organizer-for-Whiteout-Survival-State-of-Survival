@@ -1359,7 +1359,7 @@ class MainWindow(tk.Tk):
         #create new canvas on top of old canvas
         top = tk.Toplevel(self)
         top.details_expanded = False
-        top.title("Isometric View")
+        top.title('Hive Organizer '+Version+'\t'+chr(169)+' 2024/25 by Shivkala'+"\tIsometric View")
         top.style = self.style
         top.config(bd=3, bg=used_colors['bg'])
 

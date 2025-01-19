@@ -991,14 +991,14 @@ class MainWindow(tk.Tk):
 
     def printHQ(self):
         if self.paint_canvas.find_withtag('HQ'):
-            self.warn_window('Only one HQ allowed!\nHQ already exisits')
+            self.warn_window('Only one HQ allowed!\nHQ already exists')
         else:
             self.paint_canvas.block = HQ()
             self.activateButton(self.hq_button)
     
     def printTrap(self):
-        if self.paint_canvas.find_withtag('Trap'):
-            self.warn_window('Only one Trap allowe!\nTrap already exisits')
+        if len(self.paint_canvas.find_withtag('Trap')) >= 2:
+            self.warn_window('Only two Traps allowed!\nTraps already exist!')
         else:
             self.paint_canvas.block = Trap()
             self.activateButton(self.trap_button)

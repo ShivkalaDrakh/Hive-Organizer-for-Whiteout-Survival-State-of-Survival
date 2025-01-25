@@ -1,3 +1,7 @@
+'''Attention''': There have been reports that the latest Executable might have been infected.
+I have taken the Executable down until I can resolve the issue.
+You can still download the code and run it or compile it! I'm sorry for the inconvenience!
+
 # Hive Organizer</center> 
 ### A tool for Whiteout Survival and State of Survival
 

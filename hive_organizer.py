@@ -26,7 +26,7 @@ from PIL import Image, ImageTk, ImageGrab
 from hive.utils import callweb, listadd, listsub, center, VerticalScrolledFrame, find
 from hive.styles import initStyle, used_colors
 
-Version = "V0.2.2"
+Version = "V0.2.2.1"
 
 # script dir will be used as initial for load/save
 script_dir=os.path.dirname(os.path.realpath(__file__))
@@ -132,7 +132,11 @@ class Block():
             floor=canvas.create_rectangle(self.coords[0]-self.area*self.multiplier,self.coords[1]-self.area*self.multiplier,
                         self.coords[0]+self.area*self.multiplier, self.coords[1]+self.area*self.multiplier, 
                         stipple="gray12", fill=self.floor_color,outline ='',tags=('floor',self.tag))
-            canvas.tag_lower(floor)
+            #floor is lowest unless in 'Show Floor' mode
+            if not canvas.top_floor:
+                canvas.tag_lower(floor)
+            else:
+                canvas.tag_raise(floor)
             self.id.update({'floor' : floor})
             return [building, floor]        
         return building
@@ -347,15 +351,18 @@ class PaintCanvas(IsoCanvas):
         self.height = height
         self.origin = [0,0]
 
+        #setup button defaults
         self.erase = False
         self.print_coords = print_coords
         self.block = None
+        self.top_floor= False
         self.grid_on = False
         self.assign_mode = False
         self.zoom_on = False
         self.buildings=list()
         self.cities = dict()
         self.showMember = None
+        self.grid_size = 6
 
         #define mouse actions
         #Button 1
@@ -382,7 +389,7 @@ class PaintCanvas(IsoCanvas):
         self.cities = dict()
         self.showMember = None
         self.origin = [self.winfo_width()/2, self.winfo_height()/2]
-        self.makeGrid()
+        self.makeGrid(self.grid_size)
 
     def zoom(self, zoom_factor = 2.0):
         self.zoom_on = not self.zoom_on
@@ -399,7 +406,7 @@ class PaintCanvas(IsoCanvas):
         self.scale('all',*origin,zoom_factor,zoom_factor)
         Block.multiplier *= zoom_factor
         #re-draw the grid
-        self.makeGrid()
+        self.makeGrid(self.grid_size)
 
     def on_resize(self,event):
         # when the canvas resizes, Grid and Coordinates need to be updated
@@ -413,7 +420,7 @@ class PaintCanvas(IsoCanvas):
         #if sized changed: 
         if dx != 0 or dy != 0:
             # draw new grid
-            self.makeGrid()
+            self.makeGrid(self.grid_size)
             #remove coordnates
             self.delete(self.find_withtag('c_coords'))
             self.delete(self.find_withtag('g_coords'))
@@ -531,6 +538,9 @@ class PaintCanvas(IsoCanvas):
                     self.coords(id,*box)
             #put assignment indicators on top
             self.tag_raise('member','all')
+            #but still have the floor on top if so indicated
+            if self.top_floor:
+                self.tag_raise('floor','all')
         else:
             if rel:
                 self.move(building, *center)
@@ -568,7 +578,7 @@ class PaintCanvas(IsoCanvas):
         self.master.resetTrapCoord()
         self.buildings = []
         #but add the grid
-        self.makeGrid()
+        self.makeGrid(self.grid_size)
         #remove assignments from member list (if any)
         try:
             #remove active player tag
@@ -635,6 +645,22 @@ class PaintCanvas(IsoCanvas):
         self.delete(*grid)
         self.grid_on = False
 
+    def changeGridSize(self,new_grid_size = None ):
+        #This is just a test function for now
+        #TODO: implement grid size selection on MainWindow level!
+        #use default if nothing is send
+        if new_grid_size == None:
+            new_grid_size = self.grid_size 
+        if new_grid_size == 6:
+            self.grid_size = 2 
+        else:
+            self.grid_size = 6
+        #then remove old grid
+        self.removeGrid()
+        #and paint the new one
+        self.makeGrid(grid_space=self.grid_size)
+
+
     def getBuildingFromId(self,building_id):
         #get the building in the self.buildings list from the id
 
@@ -674,7 +700,7 @@ class PaintCanvas(IsoCanvas):
         member.city_id = city
         member.canvas = self
 
-        # provide coorinates if trap coordinates are activated
+        # provide coordinates if trap coordinates are activated
         if self.master.trap_c is not None:
             self.showMemberCoords(member)
 
@@ -694,6 +720,15 @@ class PaintCanvas(IsoCanvas):
         self.tag_lower('building','member')
         #also mark it in member list and remove the current selection;:
         member.changeState("new assigned,!current")
+        #autoselect next unassigned member
+        # remark: index produces an error when member does not exist in the list, but as it was just extracted from the list, it has to be there anyway
+        cur_mem = ML.members.index(member)
+        #check next member for assognment
+        #TODO: Don't forget the wrap around!
+        for next_member in ML.members[cur_mem+1:]:
+            if "assigned" not in next_member.status:
+                next_member.changeState("new current")
+                break
 
     def showMemberCoords(self, member):
         #Calculate the city coordinate in the trap grid and display it
@@ -808,6 +843,9 @@ class MainWindow(tk.Tk):
         self.trap_entry.state(['disabled'])
 
         # toggle buttons
+        self.floor_button = ttk.Button(bt_frame, text='Show Floor',style='CG.TButton', command=self.raiseFloor)
+        self.floor_button.grid(row=1, column=fc+7, sticky='e',padx=fpadx, pady=fpady)
+
         self.coord_button = ttk.Button(bt_frame, text='Coords',style='CG.TButton', command=self.printCoords)
         self.coord_button.state(['pressed'])
         self.coord_button.grid(row=1, column=fc+8, sticky='e',padx=fpadx, pady=fpady)
@@ -815,6 +853,7 @@ class MainWindow(tk.Tk):
         self.grid_button = ttk.Button(bt_frame, text='Grid', style='CG.TButton', command=self.gridOnOff)
         self.grid_button.state(['pressed'])
         self.grid_button.grid(row=1, column=fc+9, sticky='ew',padx=fpadx, pady=fpady)
+        self.grid_button.bind('<Button-3>', self.changeGridSize)
 
         self.zoom_button = ttk.Button(bt_frame, text='Zoom', style='CG.TButton',command=self.paint_canvas.zoom)
         self.zoom_button.grid(row=1, column=fc+10, sticky='ew',padx=fpadx, pady=fpady)
@@ -1009,16 +1048,28 @@ class MainWindow(tk.Tk):
             self.coord_button.state(['!pressed'])
             self.paint_canvas.removeCoords()
 
+    def raiseFloor(self):
+        self.paint_canvas.top_floor = not self.paint_canvas.top_floor
+        if self.paint_canvas.top_floor:
+            self.paint_canvas.tag_raise('floor','all')
+            self.floor_button.state(['pressed'])
+        else:
+            self.paint_canvas.tag_lower('floor','all')
+            self.floor_button.state(['!pressed'])
+
     def gridOnOff(self):
         # change from True to False or vice versa
         self.paint_canvas.grid_on = not self.paint_canvas.grid_on
         if self.paint_canvas.grid_on:
             self.grid_button.state(['pressed'])
-            self.paint_canvas.makeGrid()
+            self.paint_canvas.makeGrid(self.paint_canvas.grid_size)
         else:
             self.grid_button.state(['!pressed'])
             self.paint_canvas.removeGrid()
 
+    def changeGridSize(self,event):
+        #refer to canvas method
+        self.paint_canvas.changeGridSize(new_grid_size=self.paint_canvas.grid_size)       
      
     def eraseBuilding(self):
         #toggle erase mode
@@ -1068,7 +1119,7 @@ class MainWindow(tk.Tk):
         #find Building Buttons and put them on !pressed status
         buttons = [b for b in self.bt_frame.children.values() if 'Build.TButton' in b.cget('style') and b.instate(['pressed'])]
         for button in buttons:
-            button.state('!pressed')
+            button.state(['!pressed'])
 
     def activateButton(self, clicked_button):
         #self.set_status()
@@ -1086,7 +1137,7 @@ class MainWindow(tk.Tk):
        
         #reset all select buttons to inactive
         self.resetButtons()
-
+        #and the clicked button to active
         clicked_button.state(['pressed'])
 
         #activate button
@@ -1189,6 +1240,10 @@ class MainWindow(tk.Tk):
             self.paint_canvas.buildings= []
             #set the relevant values and add the grid
             self.setup()
+            #remove zoom
+            if self.paint_canvas.zoom_on:
+                self.paint_canvas.zoom()
+
             #check if member list exists
             for ln,line in enumerate(lines):
                 if line.startswith('MemberList:'):
@@ -1285,6 +1340,9 @@ class MainWindow(tk.Tk):
                             else:
                                 self.MembersList.addMember(Member(name=member_name))
                             self.paint_canvas.assignMember(self.MembersList,city=city)
+        #remove any remaining "new current" status
+        for member in self.MembersList.members:
+            member.changeState("!current")
 
     def fileMembersList(self):
         #if MembersList already exists, save or load List
@@ -1698,6 +1756,9 @@ def putBlock(event):
         canvas.new_block = None
     #at the end, put assignment indicators on top
     canvas.tag_raise('member','all')
+    #but still have the floor on top if so indicated
+    if canvas.top_floor:
+        canvas.tag_raise('floor','all')
 
 def checkCollision(canvas, block):
     # check if new block collides with existing building

@@ -288,9 +288,6 @@ class MembersList(tk.Toplevel):
             member.coords = [0, 0]
             member.coord_widget.config(text=' --- ')
 
-        #remove from list of assigned cities
-        #TODO: this doesn_t work with iterations
-        #canvas.cities.pop(member_name)
 
     def merge(self,new_members):
         #merge new list of names with existing one
@@ -724,11 +721,21 @@ class PaintCanvas(IsoCanvas):
         # remark: index produces an error when member does not exist in the list, but as it was just extracted from the list, it has to be there anyway
         cur_mem = ML.members.index(member)
         #check next member for assognment
-        #TODO: Don't forget the wrap around!
-        for next_member in ML.members[cur_mem+1:]:
+        self.selectNextMember(ML,cur_mem)
+  
+    def selectNextMember(self,MList,cur_member,found_member = False):
+        #select the next unassigned member in MemberList after cur_member     
+        for next_member in MList.members[cur_member+1:]:
             if "assigned" not in next_member.status:
                 next_member.changeState("new current")
-                break
+                return True
+        #no member found after cur_member? Just start again at the beginning
+        if found_member is False:
+            found_member = self.selectNextMember(MList,-1,True)
+            #we have to return even if the complete list is already assigned
+            #TODO: give warning that all members have been assigned if found_member is still False
+            return True
+        
 
     def showMemberCoords(self, member):
         #Calculate the city coordinate in the trap grid and display it

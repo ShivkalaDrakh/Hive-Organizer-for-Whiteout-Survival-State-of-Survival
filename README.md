@@ -14,9 +14,9 @@ Add Cities, Flags, HQ, Trap and Obstacles (Rocks)
 Just Click on the Member name and the city position (in Assign Mode)
 ![Picture of sample Hive with assigned Members](Screenshot%20Assign.png)
 
-The City is then assigned to the Member, the number on the City corresponding to the number in the Member List.
+The City is then assigned to the Member, the number on the City corresponding to the number in the Member List. After assignining, the next unassigned member will be selected (V0.2.3) so that you can just click through the cities without the need to selecting the member name anew everytime.
+
 A Mouse-over over the City shows the name of the alliance member. Overwritting and re-positioning is just as easy.
-(Video will be added)
 
 Also by klicking on the Member name on the list, the city in the Hive is highlighted, making it much easier to find a member in the Hive!
 
@@ -36,6 +36,8 @@ an area and move the seleced buildings in one go.
 
 When building with flags, it is often important to see the complete covered area. To ease this, V0.2.3 introduced the possibility to show the covered area on top of the buildings.
 
+![Show Floor on top of Buildings](Screenshot%20Top%20Floor.png)
+
 ### Isometric View
 As the game has a 45° isometric view, it is not always easy to get the game grid correctly alligned with the buildings.
 Therefore, the Hive can be displayed in Ismetric View to have the same orientation as in the game!
@@ -44,7 +46,7 @@ Therefore, the Hive can be displayed in Ismetric View to have the same orientati
 And also in the isometric view you can choose different Zoom settings and print the Hive as a PNG file.
 ![Isometric View of the Hive in Zoom Mode, including Assignments](Screenshot%20Isometric_zoom.png)
 
-### Trap and City Coordinates (V0.2)
+### Trap and City Coordinates 
 By entering the Trap Coordinates as given by the game, all grid coordinates are updated to those coordinates and all assignened member cities show the coordinates next to their name.
 
 ## Getting started

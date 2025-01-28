@@ -1,6 +1,3 @@
-### Attention
-The corrupted executable has been replaced by a clean version, everything should work fine again!
-
 # Hive Organizer</center> 
 ### A tool for Whiteout Survival and State of Survival
 
@@ -27,6 +24,9 @@ Also by klicking on the Member name on the list, the city in the Hive is highlig
 Whether you need your whole Hive to be visible or prefer bigger blocks for member assignment or building, you can use different zoom settings
 ![picture of Zoom Mode](Screenshot%20zoom.png)
 
+### Using differnt grid sizes (V0.2.3)
+By left-clicking on the Grid button you can toggle the grid on and off. By right-clicking on the grid button, you can toggle the grid size between 6x6 (default) and 2x2.
+
 ### Re-build and modify
 Whether you want to just move a few buildings around or a whole block of Cities and Flags, just right-click-drag 
 an area and move the seleced buildings in one go.
@@ -34,12 +34,14 @@ an area and move the seleced buildings in one go.
 
 ![Move seleced Buildings](Screenshot%20Moved.png)
 
+When building with flags, it is often important to see the complete covered area. To ease this, V0.2.3 introduced the possibility to show the covered area on top of the buildings.
+
 ### Isometric View
-As the game has a 45° isometric view, it is not always easy to get the  game grid correctly alligned with the buildings.
+As the game has a 45° isometric view, it is not always easy to get the game grid correctly alligned with the buildings.
 Therefore, the Hive can be displayed in Ismetric View to have the same orientation as in the game!
 ![Isometric View of the Hive, including Assignments](Screenshot%20Isometric.png)
 
-And also in the isometric view you can choose different Zoom settings
+And also in the isometric view you can choose different Zoom settings and print the Hive as a PNG file.
 ![Isometric View of the Hive in Zoom Mode, including Assignments](Screenshot%20Isometric_zoom.png)
 
 ### Trap and City Coordinates (V0.2)

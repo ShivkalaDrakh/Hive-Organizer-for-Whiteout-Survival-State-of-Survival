@@ -26,7 +26,7 @@ from PIL import Image, ImageTk, ImageGrab
 from hive.utils import callweb, listadd, listsub, center, VerticalScrolledFrame, find
 from hive.styles import initStyle, used_colors
 
-Version = "V0.2.3"
+Version = "V0.2.3.1"
 
 # script dir will be used as initial for load/save
 script_dir=os.path.dirname(os.path.realpath(__file__))
@@ -288,6 +288,9 @@ class MembersList(tk.Toplevel):
             member.coords = [0, 0]
             member.coord_widget.config(text=' --- ')
 
+        #remove from list of assigned cities
+        #TODO: this doesn_t work with iterations
+        #canvas.cities.pop(member_name)
 
     def merge(self,new_members):
         #merge new list of names with existing one
@@ -324,6 +327,11 @@ class MembersList(tk.Toplevel):
             cur_member.changeState('!current')
         #and make the new member the current one
         member.changeState("new current")
+
+    def removeCurrent(self):
+        #remove all 'current' tags
+        for memb in self.members:
+            memb.changeState("!current")
 
 class IsoCanvas(tk.Canvas):
     def __init__(self, master, width=0, height=0, bg='white', print_coords = True):
@@ -558,15 +566,18 @@ class PaintCanvas(IsoCanvas):
 
     def areaSelect(self, event):
         #find all blocks inside the area
-        all_stuff = set(self.find_enclosed(*self.area))
-        selected = set(self.find_withtag('building'))
-        selected.union(set(self.find_withtag('floor')))
-        selected_stuff = all_stuff.intersection(selected)
-        for select in selected_stuff:
-            self.itemconfig(select,stipple='gray12')
-            self.addtag('selected','withtag', select)
-        #then release the selection frame
-        self.delete(self.area_box)    
+        #check if selection was actually done by self.showArea and not just right click
+        #so release event has to be different to click event (otherwise size = 0)
+        if self.area[0:2] != [event.x, event.y]:
+            all_stuff = set(self.find_enclosed(*self.area))
+            selected = set(self.find_withtag('building'))
+            selected.union(set(self.find_withtag('floor')))
+            selected_stuff = all_stuff.intersection(selected)
+            for select in selected_stuff:
+                self.itemconfig(select,stipple='gray12')
+                self.addtag('selected','withtag', select)
+            #then release the selection frame
+            self.delete(self.area_box)    
 
     def drawDefault(self):
         #draw HQ, Trap and Grid
@@ -735,7 +746,6 @@ class PaintCanvas(IsoCanvas):
             #we have to return even if the complete list is already assigned
             #TODO: give warning that all members have been assigned if found_member is still False
             return True
-        
 
     def showMemberCoords(self, member):
         #Calculate the city coordinate in the trap grid and display it
@@ -1203,8 +1213,6 @@ class MainWindow(tk.Tk):
         try:
             self.MembersList.winfo_exists()
             member_list = self.MembersList.lines
-            #remove leading numbers and coordinates
-
             #strip whitespaces
             member_list = [member.strip() for member in member_list]
         except AttributeError:
@@ -1272,8 +1280,7 @@ class MainWindow(tk.Tk):
                 except AttributeError:
                     self.MembersList = MembersList(ml_data,geometry=("{}x{}+{}+{}".format(250, self.winfo_height(),self.winfo_x()+self.winfo_width(),self.winfo_y())))
                     #remove active player tag
-                    for member in self.MembersList.members:
-                        member.changeState("!current")
+                    self.MembersList.removeCurrent()
 
             # reset Trap Coordinates, then add the buildings
             self.resetTrapCoord()
@@ -1342,14 +1349,15 @@ class MainWindow(tk.Tk):
                             #check if member exists in list
                             member = find(lambda f: f.name == member_name, ML.members)
                             if member:
+                                #remove active player tag
+                                self.MembersList.removeCurrent()
                                 member.changeState("new current")
                             #if member is not found, add them to the list
                             else:
                                 self.MembersList.addMember(Member(name=member_name))
                             self.paint_canvas.assignMember(self.MembersList,city=city)
         #remove any remaining "new current" status
-        for member in self.MembersList.members:
-            member.changeState("!current")
+        self.MembersList.removeCurrent()
 
     def fileMembersList(self):
         #if MembersList already exists, save or load List
@@ -1410,7 +1418,7 @@ class MainWindow(tk.Tk):
             #remove active player tag
             for member in self.MembersList.members:
                 member.changeState('!current')
-
+            
         elif response == 'merge':
             #merge both lists
             self.MembersList.merge(ml_data)

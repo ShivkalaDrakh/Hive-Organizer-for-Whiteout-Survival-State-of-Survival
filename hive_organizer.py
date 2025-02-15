@@ -26,7 +26,7 @@ from PIL import Image, ImageTk, ImageGrab
 from hive.utils import callweb, listadd, listsub, center, VerticalScrolledFrame, find
 from hive.styles import initStyle, used_colors
 
-Version = "V0.2.3.1"
+Version = "V0.2.3.2"
 
 # script dir will be used as initial for load/save
 script_dir=os.path.dirname(os.path.realpath(__file__))

@@ -188,6 +188,14 @@ class Rock(Block):
      def __init__(self,size=2, area=0,coords=[0,0],color=used_colors["rock"], tag='Rock'):
           super().__init__(size, area,coords,color,tag)  
 
+class Castle(Block):
+    def __init__(self,size=6, area=28,coords=[0,0],color=used_colors["castle"], tag='Castle'):
+          super().__init__(size, area,coords,color,tag) 
+
+class Tower(Block):
+    def __init__(self,size=2, area=0,coords=[0,0],color=used_colors["castle"], tag='Tower'):
+          super().__init__(size, area,coords,color,tag) 
+
 class MembersList(tk.Toplevel):
     # Defines the window with the list of member names
     def __init__(self,lines,geometry='100x100+100+100'):
@@ -929,7 +937,7 @@ class MainWindow(tk.Tk):
         #performed once mainloop is started
         self.paint_canvas.setup()
         self.active_button = None
-        self.buildings = set(['HQ','City','Flag','Trap','Rock'])
+        self.buildings = set(['HQ','City','Flag','Trap','Rock','Castle','Tower'])
 
     def resetTrapCoord(self):
         #TODO: make inactive even if trap is there

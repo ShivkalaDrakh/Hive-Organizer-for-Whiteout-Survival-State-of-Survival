@@ -1364,8 +1364,11 @@ class MainWindow(tk.Tk):
                             else:
                                 self.MembersList.addMember(Member(name=member_name))
                             self.paint_canvas.assignMember(self.MembersList,city=city)
-        #remove any remaining "new current" status
-        self.MembersList.removeCurrent()
+        #remove any remaining "new current" status if MembersList exists
+        try:
+            self.MembersList.removeCurrent()
+        except AttributeError:
+            pass
 
     def fileMembersList(self):
         #if MembersList already exists, save or load List

@@ -1,6 +1,6 @@
 """
 Hive Organizer for Whiteout Survival and State of Survival
-Copyright (C) 2024 Mark Hartrampf
+Copyright (C) 2024/2025 Mark Hartrampf
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -30,13 +30,13 @@ from hive.utils import VerticalScrolledFrame, ScrolledFrame, callweb, listadd, l
 from hive.styles import initStyle, used_colors, used_colors_default
 from hive.canvas import *
 
-Version = "V0.3.alpha"
+Version = "V0.3"
 #TODO for V0.3:
 # - Menus and Keyboard Short Cuts -> partially done
 # - color selection for all buildings -> Done
 # - Remove erased cities from Assignement List and also delete name pop-up -> Done
-# - Add columns to MembersList (e.g. Furnace Level, Power, Rank)
-# - Allow configuration of those additional columns via menubar
+# - Add columns to MembersList (e.g. Furnace Level, Power, Rank) -> Done
+# - Allow configuration of those additional columns via menubar -> Done
 # - add button to enter more embers in member list
 #NICE TO HAVE for 0.3:
 # - 
@@ -46,7 +46,7 @@ init_dir =os.path.join(script_dir,'hive')
 save_dir = os.path.join(init_dir,'save')
 
 class Member():
-    def __init__(self, number=0, name='', coords='[XXX, YYY] ',power="100.0M",level='FC1',rank='R1',status='', 
+    def __init__(self, number=0, name='', coords='[ ---, --- ] ',power="100.0M",level='FC1',rank='R1',status='', 
                  city_id=None, widget = None, coord_widget = None, canvas = None):
         self.number=number
         self.name = tk.StringVar(value=name)
@@ -157,8 +157,6 @@ class MembersList(tk.Toplevel):
                                     level=mem_attr[2].strip(),rank=mem_attr[3]))
         self.setup()
         self.update()
-        #adjust header
-        self.generateHeader()
 
         # add (empty) menubar
         self.mB = tk.Menu(self)
@@ -185,6 +183,10 @@ class MembersList(tk.Toplevel):
         self.configMenu.add_command(label='Close Members List',accelerator='Alt+F4',command=self.destroy)
         # Alt-F4 is already defined, no need to bind it again
         self.mB.add_cascade(label='Config', menu=self.configMenu)
+        
+        #adjust header
+        self.generateHeader()
+        
         self.update()
 
     def setup(self):
@@ -305,7 +307,7 @@ class MembersList(tk.Toplevel):
             member.changeState("!assigned")
             member.city_id = None
             member.coords = [0, 0]
-            member.coord_widget.config(text='[XXX, YYY]')
+            member.coord_widget.config(text='[ ---, --- ]')
 
         #remove from list of assigned cities
         #TODO: this doesn_t work with iterations
@@ -368,8 +370,8 @@ class MembersList(tk.Toplevel):
 
         ml_entry.grid(row=new_idx,column=1, sticky='news')
         member.widget = ml_entry
-        ml_coords = ttk.Label(self.new_frame,style='TLabel',text=member.coords)
-        ml_coords.grid(row=new_idx,column=2, padx= 7, sticky='news')
+        ml_coords = ttk.Label(self.new_frame,style='TLabel',text=str(member.coords))
+        ml_coords.grid(row=new_idx,column=2, padx= 2, sticky='news')
         member.coord_widget = ml_coords
         # Add new columns here if neccessary
         new_columns = [member.power, member.level,member.rank]
@@ -410,7 +412,7 @@ class MembersList(tk.Toplevel):
 class MainWindow(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title('Hive Organizer '+Version+'\t'+chr(169)+' 2024/25 by Shivkala')
+        self.title('Hive Organizer '+Version+'\t'+chr(169)+' 2025 by Shivkala')
 
         #define buttons and button actions
         # size depending on screen size

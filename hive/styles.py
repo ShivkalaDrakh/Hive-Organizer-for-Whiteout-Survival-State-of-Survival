@@ -1,20 +1,27 @@
 import os
 import tkinter as tk 
 from tkinter import ttk
+from copy import deepcopy
 
 #color dictionary
 used_colors = { "assign":"#99ee99",
                 "current" : "#e9e999",
-                "text" : 'orange',
-                "floor" : "#dd6666",
-                "city" : "grey",
-                "flag" : "cyan",
-                "rock" : "black",
-                "hq" : "green",
-                "trap" : "yellow",
+                "text" : "#dab55d",
+                "floor" : "#606b82",
+                "city" : "#ff4e45",
+                "flag" : "#7f7f7f",
+                "rock" : "#454a7d",
+                "hq" : "#135d96",
+                "trap" : "#60c5f4",
+                "castle" : "orange",
+                "tower" : "orange",
                 "erase1" : "purple",
-                "erase2" : "red" 
+                "erase2" : "red",
+                "canvas_bg" : "#bac1dc" 
                    }
+
+# make a copy of the default values, as "used_colors" changes
+used_colors_default = deepcopy(used_colors)
 
 def initStyle(win, theme='black'):
     #define the style of ttk 
@@ -102,6 +109,6 @@ def initStyle(win, theme='black'):
                         ('!focus', 'red')],
         relief=[('pressed', 'sunken'),
                 ('!pressed', 'raised')])
-    style.configure('Current.TEntry',fieldbackground=used_colors['current'])
-    style.configure('Assign.TEntry',fieldbackground=used_colors['assign'])
+    style.configure('Current.TEntry',fieldbackground=used_colors["current"])
+    style.configure('Assign.TEntry',fieldbackground=used_colors["assign"])
     return style

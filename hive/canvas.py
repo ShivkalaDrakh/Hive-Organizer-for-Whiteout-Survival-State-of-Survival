@@ -639,14 +639,7 @@ class PaintCanvas(IsoCanvas):
         self.buildings = []
         #but add the grid
         self.makeGrid(self.grid_size)
-        #remove assignments from member list (if any)
-        try:
-            #remove active player tag
-            for member in self.MembersList.members:
-                member.changeState("!assigned")
-            #self.master.MembersList.members_list.tag_remove('assigned','1.0','end')
-        except AttributeError:
-            pass
+
         #put HQ and Trap
         HeadQuarter = HQ(coords=[-11, 5]) 
         NewTrap = Trap(coords = [0,0])
@@ -810,7 +803,7 @@ class PaintCanvas(IsoCanvas):
             member.coords = cc_grid
             member.coord_widget.config(text=str(member.coords))
         else:
-            member.coord_widget.config(text=' --- ')
+            member.coord_widget.config(text='[ ---, --- ]')
 
     def findAssignee(self,id):
         #find the name of the member assigned to the id of the canvas object

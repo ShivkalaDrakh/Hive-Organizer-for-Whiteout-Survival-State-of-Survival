@@ -180,7 +180,7 @@ class MembersList(tk.Toplevel):
         self.configMenu.add_separator()
         
         #also remove the close butten and make it a command
-        self.configMenu.add_command(label='Close Members List',accelerator='Alt+F4',command=self.destroy)
+        self.configMenu.add_command(label='Close Members List',accelerator='Alt+F4',command=self.closeML)
         # Alt-F4 is already defined, no need to bind it again
         self.mB.add_cascade(label='Config', menu=self.configMenu)
         
@@ -282,14 +282,15 @@ class MembersList(tk.Toplevel):
         for member in self.members:
             if "assigned;" in member.status:
                 canvas.showMemberCoords(member)
-        self.updateHeader()
+        #self.updateHeader()
 
     def updateHeader(self): 
-        self.update()
+        #just an alias for self.head_canvas.update()
+        """self.update()
         for id in self.head_canvas.find_all():
             new_x = self.new_frame.grid_bbox(id-1, 0)[0]
             own_x = self.head_canvas.bbox(id)[0]
-            self.head_canvas.move(id,new_x-own_x,0)
+            self.head_canvas.move(id,new_x-own_x,0)"""
         self.head_canvas.update()
 
     def removeCityAssignment(self, city, member_name):
@@ -409,11 +410,35 @@ class MembersList(tk.Toplevel):
             member_lines.append(';'.join([member.name.get(),member.power.get(),member.level.get(),member.rank.get()]))
         return member_lines
 
+    def closeML(self):
+        #warning: closing ML will remove all assignments
+        response = self.master.warnWindow('Closing MembersList will delete current \nassignments!\nDo you want to proceed?', buttons = 2, b_text=['Yes','No'])
+        if response == 'yes':
+            self.clearAssignments()
+            self.destroy()
+
+    def clearAssignments(self):
+        #remove all assignments from current hive
+        canvas = self.master.paint_canvas
+        for member_name in canvas.cities.keys():
+            old_city = canvas.cities[member_name]
+            self.removeCityAssignment(old_city,member_name)
+        #and set the list to 'empty'
+        canvas.cities.clear()
+        canvas.assignments.clear()
+        #also remove the member state
+        try:
+            #remove active player tag
+            for member in self.members:
+                member.changeState("!assigned")
+        except AttributeError:
+            pass
+
 class MainWindow(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title('Hive Organizer '+Version+'\t'+chr(169)+' 2025 by Shivkala')
-
+        self.file_name = ''
         #define buttons and button actions
         # size depending on screen size
         geo_fac = 0.5
@@ -583,23 +608,32 @@ class MainWindow(tk.Tk):
         self.menuBar = tk.Menu(top)
         top['menu'] = self.menuBar
         # Menu for File Options
+        # Hive Options
+        
         self.fileMenu = tk.Menu(self.menuBar, tearoff=0)
-        self.fileMenu.add_command(label='Save Hive',accelerator='Ctrl+S',command=self.saveLayout)
-        self.bind("<Control-s>", self.saveLayout)
         self.fileMenu.add_command(label='Load Hive',accelerator='Ctrl+L',command=self.loadLayout)
         self.bind("<Control-l>", self.loadLayout)
+        self.fileMenu.add_command(label='Save Hive',accelerator='Ctrl+S',command=self.saveLayout)
+        self.bind("<Control-s>", self.saveLayout)
+        self.fileMenu.add_command(label='Save Hive As...',accelerator='Ctrl+Shift+S',command=lambda nf=True: self.saveLayout(new_file=nf))
+        self.bind("<Control-S>", lambda e,nf=True: self.saveLayout(event=e,new_file=nf))
+        
         self.fileMenu.add_separator()
-        self.fileMenu.add_command(label='Save MembersList',accelerator='Ctrl+M', command=self.saveMembersList)
-        self.bind("<Control-m>", self.saveMembersList)
+        #MembersList Options
         self.fileMenu.add_command(label='Load MembersList',accelerator='Ctrl+O', command=self.loadMembersList)
         self.bind("<Control-o>", self.loadMembersList)
+        self.fileMenu.add_command(label='Save MembersList',accelerator='Ctrl+M', command=self.saveMembersList)
+        self.bind("<Control-m>", self.saveMembersList)
+        
         self.fileMenu.add_separator()
-        self.fileMenu.add_command(label='Save Color Theme',accelerator='Ctrl+T', command=self.saveColors)
-        self.bind("<Control-t>", self.saveColors)
+        #Color Theme options
         self.fileMenu.add_command(label='Load Color Theme',accelerator='Ctrl+Shift+T', command=self.loadColors)
         self.bind("<Control-T>", self.loadColors)
+        self.fileMenu.add_command(label='Save Color Theme',accelerator='Ctrl+T', command=self.saveColors)
+        self.bind("<Control-t>", self.saveColors)
+        
         self.fileMenu.add_separator()
-        self.fileMenu.add_command(label='Quit',accelerator='Ctrl+Q', command=self.quitDialog)
+        self.fileMenu.add_command(label='Exit',accelerator='Ctrl+Q', command=self.quitDialog)
         self.bind("<Control-q>", self.quitDialog)
         #Menu for Mode Options
         self.modeMenu = tk.Menu(self.menuBar, tearoff=0)
@@ -805,10 +839,14 @@ class MainWindow(tk.Tk):
             response = 'yes'
         if response == 'yes':
             self.setup()
+            #if there are any assignments, clear assignment
+            self.MembersList.clearAssignments()
             self.activateButton(self.default_button)
             self.paint_canvas.drawDefault()
             self.activateButton(self.default_button)
-
+            #reset file name
+            self.file_name = ''
+            
     def isometricView(self):
         #rotate the Canvas contents by 45° to give isometric view like in the game
         self.rotateCanvas(-45)
@@ -985,9 +1023,15 @@ class MainWindow(tk.Tk):
         obj_info_str = tag+': '+str(obj_info)+'\n'
         return obj_info_str.encode('utf8', errors='xmlcharrefreplace')
 
-    def saveLayout(self,event=False):
+    def saveLayout(self,event=False,new_file=False):
         #save buildings and assignments to file
-        save_file = asksaveasfilename(title='Save Hive as:', defaultextension='.hb', initialdir=save_dir,filetypes=[('Hive Organizer file','*.hb')])
+        #file already exists:
+        if self.file_name == '':
+            new_file = True
+        #if new file, ask for file name
+        if new_file:
+            self.file_name = asksaveasfilename(title='Save Hive as:', defaultextension='.hb', initialdir=save_dir,filetypes=[('Hive Organizer file','*.hb')])
+
         self.assigments = { id : city for city, id in self.paint_canvas.cities.items()}
         building_info = list()
         #remove zoom status for saving
@@ -1007,7 +1051,7 @@ class MainWindow(tk.Tk):
             member_list = None
         
         #Write one line for each building
-        with open(save_file,'wb') as file:
+        with open(self.file_name,'wb') as file:
             #Start with Trap Coordinates if any
             if self.trap_c is not None:
                 #ensure integer
@@ -1028,7 +1072,7 @@ class MainWindow(tk.Tk):
             # TODO: Might also save everything as json
             # But needs a legacy load function then
             if used_colors is not used_colors_default:
-                col_file = save_file.split('.')[-2]+'.col'
+                col_file = self.file_name.split('.')[-2]+'.col'
                 with open(col_file, 'w') as fp:
                     json.dump(used_colors, fp)
 
@@ -1040,16 +1084,16 @@ class MainWindow(tk.Tk):
         #load previously saved layout
         lines=''
         ml_data = str()
-        load_file = askopenfilename(title='Load Hive file:',initialdir=save_dir,defaultextension='.hb',filetypes=[('Hive Organizer file','*.hb'), ('All files','*.*')])   
+        self.file_name = askopenfilename(title='Load Hive file:',initialdir=save_dir,defaultextension='.hb',filetypes=[('Hive Organizer file','*.hb'), ('All files','*.*')])   
         #if a color file exists, load it before the rest
         try:
-            col_file = load_file.split('.')[-2]+'.col'
+            col_file = self.file_name.split('.')[-2]+'.col'
             self.loadColors(col_file=col_file)          
         except FileNotFoundError:
             #no associated color file, use current colors
             pass
-        if load_file:
-            with open(load_file,'r',encoding='utf8') as file:
+        if self.file_name:
+            with open(self.file_name,'r',encoding='utf8') as file:
                 lines=file.readlines()
         # only if data was read
         if lines:
@@ -1229,11 +1273,7 @@ class MainWindow(tk.Tk):
                                     buttons = 3, b_text=['Overwrite','Merge','Ignore'])
         if response == 'overwrite':
             #remove all old assignments
-            for member_name in self.paint_canvas.cities.keys():
-                old_city = self.paint_canvas.cities[member_name]
-                self.MembersList.removeCityAssignment(old_city,member_name)
-            #and set the list to 'empty'
-            self.paint_canvas.cities.clear()
+            self.MembersList.clearAssignments()
 
             #remove existing list
             self.MembersList.destroy()

@@ -48,6 +48,25 @@ And also in the isometric view you can choose different Zoom settings and print 
 
 ### Trap and City Coordinates 
 By entering the Trap Coordinates as given by the game, all grid coordinates are updated to those coordinates and all assignened member cities show the coordinates next to their name.
+After finishing to put in the Trap Coordinates, selcect "Update Coordinates" from the Members List Config Menu!
+
+### Additional Columns for Members List (V0.3)
+In the Members List Config Menu you can select (currently) 3 additional columns to be displayed: 
+"Power", "Level", and "Rank". They are displayed by default, but can be deselected in the Menu.
+
+The values can be editied either right in the Hive Organizer or by editing either 
+MembersList *.txt file or *.hb file in any text editor.
+![Selection of additional Columns for Members List](Screenshot%20ML%20columns.png)
+
+### Color Themes (V0.3)
+Version 0.3 introduces Color Themes! The default theme is set to a palette resembling the one from WOS. But others can be found in the save folder.
+You can also generate your own color palette!
+![Selection of Colors for a building](Screenshot%20Color%20palette.png)
+Each building type as well as the floor and the background can be changed via the "Colors" Menu and then saved using the "File" Menu.
+The current palette is automatically saved with the Hive if you save the Hive!
+
+You can also share your palette with others! Or send it to me and I will add it to the GitHub files!
+![Using the "Colorful" palette theme](Screenshot%20Colorful.png)
 
 ## Getting started
 You can either download 

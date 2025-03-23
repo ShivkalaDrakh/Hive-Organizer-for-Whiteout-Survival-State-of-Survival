@@ -36,6 +36,11 @@ class Block():
                                 fill=color,tags=('building',self.tag))
         self.id.update({'building' : building})
         canvas.buildings.append(self)
+        #if it is HQ or Trap, give it a popup text
+        if self.tag in ['Trap','HQ','Rock','Flag']:
+            self.canvas.tag_bind(building,'<Enter>',func=lambda event: showAssignment(event=event,canvas = self.canvas,tag=self.tag))
+            self.canvas.tag_bind(building,'<Leave>',func=lambda event: showAssignment(event=event,canvas = self.canvas))
+
         #if building provides Area, add it here
         if self.area > 0:
             if floor_color is None:
@@ -88,9 +93,9 @@ class City(Block):
 
 class HQ(Block):
      def __init__(self,size=3, area=15,coords=[0,0],color=used_colors["hq"], tag='HQ',floor_id=0):
-          super().__init__(size, area,coords,color,tag)
-          self.floor_id = floor_id   
-        
+            super().__init__(size, area,coords,color,tag)
+            self.floor_id = floor_id   
+
 class Trap(Block):
      def __init__(self,size=3, area=0,coords=[0,0],color=used_colors["trap"], tag='Trap'):
           super().__init__(size, area,coords,color,tag)       
@@ -107,13 +112,18 @@ class Tower(Block):
     def __init__(self,size=2, area=0,coords=[0,0],color=used_colors["tower"], tag='Tower'):
           super().__init__(size, area,coords,color,tag) 
 
-def showAssignment(event, canvas):
+def showAssignment(event, canvas, tag=None):
     #show name of assigned member in a box
     #get active object
 
     current = canvas.find_withtag(tk.CURRENT)[0]
-    #get member from tag of event
-    member = canvas.findAssignee(current)
+    # if it's a member:
+    if tag is None:
+        #get member from tag of event
+        member = canvas.findAssignee(current)
+    # else HQ, Trap, Rock, Flag
+    else:
+        member=tag
     #list(set(canvas.gettags(current)).intersection(set(canvas.cities.keys())))[0] 
 
     if event.type == tk.EventType['Enter']:

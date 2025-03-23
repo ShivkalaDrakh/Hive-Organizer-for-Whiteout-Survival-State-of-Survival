@@ -9,7 +9,7 @@ action!
 ### Build your Hive
 Add Cities, Flags, HQ, Trap and Obstacles (Rocks) 
 ![Picture of sample Hive](Screenshot%20Setup.png)
-
+<video src="https://github.com/user-attachments/assets/7c7a467b-9162-4bcf-947a-20a0cebf8be1"/>
 ### Assign Member Positions
 Just Click on the Member name and the city position (in Assign Mode)
 ![Picture of sample Hive with assigned Members](Screenshot%20Assign.png)
@@ -19,12 +19,12 @@ The City is then assigned to the Member, the number on the City corresponding to
 A Mouse-over over the City shows the name of the alliance member. Overwritting and re-positioning is just as easy.
 
 Also by klicking on the Member name on the list, the city in the Hive is highlighted, making it much easier to find a member in the Hive!
-
+<video src="https://github.com/user-attachments/assets/f4c41542-892d-4315-a686-26d2deba61eb"/>
 ### Different Zoom for clearer editing
 Whether you need your whole Hive to be visible or prefer bigger blocks for member assignment or building, you can use different zoom settings
 ![picture of Zoom Mode](Screenshot%20zoom.png)
 
-### Using differnt grid sizes (V0.2.3)
+### Using differnt grid sizes
 By left-clicking on the Grid button you can toggle the grid on and off. By right-clicking on the grid button, you can toggle the grid size between 6x6 (default) and 2x2.
 
 ### Re-build and modify
